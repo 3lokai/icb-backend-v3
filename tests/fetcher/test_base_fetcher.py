@@ -166,15 +166,27 @@ class TestBaseFetcher:
                 
                 # Verify exponential backoff delays
                 sleep_calls = mock_sleep.call_args_list
-                assert len(sleep_calls) >= 2  # At least two retries (politeness delay + retry delays)
+                assert len(sleep_calls) >= 3  # Politeness delay + 2 retry delays
                 
-                # Find the retry delays (exclude politeness delays which are < 0.1)
-                retry_delays = [call[0][0] for call in sleep_calls if call[0][0] >= 0.1]
-                assert len(retry_delays) >= 2
-                # Check that retry delays are approximately correct (allowing for jitter)
-                # First retry: 0.1 * (2^0) = 0.1, Second retry: 0.1 * (2^1) = 0.2
-                assert 0.05 <= retry_delays[0] <= 0.15  # First retry delay (0.1 ± jitter)
-                assert 0.15 <= retry_delays[1] <= 0.25  # Second retry delay (0.2 ± jitter)
+                # The sequence should be:
+                # 1. Politeness delay (0.1 ± jitter) - before first request
+                # 2. First retry delay (0.1 * 2^0 = 0.1) - after first failure  
+                # 3. Second retry delay (0.1 * 2^1 = 0.2) - after second failure
+                
+                # Check that we have the expected number of delays
+                assert len(sleep_calls) == 3
+                
+                # Check politeness delay (first call, should be ~0.1)
+                politeness_delay = sleep_calls[0][0][0]
+                assert 0.05 <= politeness_delay <= 0.15  # 0.1 ± 0.05 jitter
+                
+                # Check first retry delay (second call, should be 0.1)
+                first_retry_delay = sleep_calls[1][0][0]
+                assert 0.05 <= first_retry_delay <= 0.15  # 0.1 ± small jitter
+                
+                # Check second retry delay (third call, should be 0.2)
+                second_retry_delay = sleep_calls[2][0][0]
+                assert 0.15 <= second_retry_delay <= 0.25  # 0.2 ± small jitter
     
     @pytest.mark.asyncio
     async def test_timeout_handling(self, base_fetcher):

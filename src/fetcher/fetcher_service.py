@@ -5,12 +5,13 @@ Handles configuration loading, fetcher creation, and result storage.
 
 import asyncio
 from typing import Dict, List, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from structlog import get_logger
 
 from .fetcher_factory import create_fetcher_from_source_id
+from .storage import ResponseStorage
 from ..config.fetcher_config import config_manager
 
 logger = get_logger(__name__)
@@ -28,9 +29,10 @@ class FetcherService:
     - Updates source ping status
     """
     
-    def __init__(self):
+    def __init__(self, storage_path: str = "data/fetcher"):
         self.results: Dict[str, Any] = {}
         self.errors: Dict[str, str] = {}
+        self.storage = ResponseStorage(storage_path)
     
     async def fetch_from_source(
         self,
@@ -51,7 +53,7 @@ class FetcherService:
         Returns:
             Dictionary with fetch results and metadata
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         try:
             logger.info(
@@ -73,6 +75,43 @@ class FetcherService:
                 else:
                     products = await fetcher.fetch_products(**fetch_params)
                 
+                # Store raw response for validation and replay
+                try:
+                    storage_info = await self.storage.store_response(
+                        roaster_id=fetcher.roaster_id,
+                        platform=fetcher.platform,
+                        response_data={
+                            'source_id': source_id,
+                            'roaster_id': fetcher.roaster_id,
+                            'platform': fetcher.platform,
+                            'base_url': fetcher.base_url,
+                            'products': products,
+                            'product_count': len(products),
+                            'fetch_all': fetch_all,
+                            'fetch_params': fetch_params,
+                            'started_at': start_time.isoformat(),
+                            'completed_at': datetime.now(timezone.utc).isoformat(),
+                            'success': True,
+                        },
+                        metadata={
+                            'source_id': source_id,
+                            'fetch_all': fetch_all,
+                            'fetch_params': fetch_params,
+                        }
+                    )
+                    logger.info(
+                        "Stored raw response",
+                        source_id=source_id,
+                        storage_path=storage_info['response_path'],
+                        content_hash=storage_info['content_hash']
+                    )
+                except Exception as storage_error:
+                    logger.error(
+                        "Failed to store raw response",
+                        source_id=source_id,
+                        error=str(storage_error)
+                    )
+                
                 # Store results
                 result = {
                     'source_id': source_id,
@@ -84,7 +123,7 @@ class FetcherService:
                     'fetch_all': fetch_all,
                     'fetch_params': fetch_params,
                     'started_at': start_time.isoformat(),
-                    'completed_at': datetime.utcnow().isoformat(),
+                    'completed_at': datetime.now(timezone.utc).isoformat(),
                     'success': True,
                 }
                 
@@ -99,7 +138,7 @@ class FetcherService:
                     roaster_id=fetcher.roaster_id,
                     platform=fetcher.platform,
                     product_count=len(products),
-                    duration_seconds=(datetime.utcnow() - start_time).total_seconds(),
+                    duration_seconds=(datetime.now(timezone.utc) - start_time).total_seconds(),
                 )
                 
                 return result
@@ -108,6 +147,53 @@ class FetcherService:
             error_msg = str(e)
             self.errors[source_id] = error_msg
             
+            # Store failed response for debugging
+            try:
+                # Try to get roaster info for storage
+                roaster_id = "unknown"
+                platform = "unknown"
+                try:
+                    source_config = await config_manager.get_source_by_id(source_id)
+                    if source_config:
+                        roaster_id = source_config.roaster_id
+                        platform = source_config.platform
+                except:
+                    pass  # Use defaults if we can't get source info
+                
+                await self.storage.store_failed_response(
+                    roaster_id=roaster_id,
+                    platform=platform,
+                    error_data={
+                        'source_id': source_id,
+                        'roaster_id': roaster_id,
+                        'platform': platform,
+                        'error': error_msg,
+                        'started_at': start_time.isoformat(),
+                        'completed_at': datetime.now(timezone.utc).isoformat(),
+                        'success': False,
+                        'fetch_all': fetch_all,
+                        'fetch_params': fetch_params,
+                    },
+                    metadata={
+                        'source_id': source_id,
+                        'fetch_all': fetch_all,
+                        'fetch_params': fetch_params,
+                        'error_type': type(e).__name__,
+                    }
+                )
+                logger.info(
+                    "Stored failed response for debugging",
+                    source_id=source_id,
+                    roaster_id=roaster_id,
+                    platform=platform
+                )
+            except Exception as storage_error:
+                logger.error(
+                    "Failed to store failed response",
+                    source_id=source_id,
+                    storage_error=str(storage_error)
+                )
+            
             # Update source ping status
             await config_manager.update_source_ping(source_id, False)
             
@@ -115,7 +201,7 @@ class FetcherService:
                 "Failed to fetch from source",
                 source_id=source_id,
                 error=error_msg,
-                duration_seconds=(datetime.utcnow() - start_time).total_seconds(),
+                duration_seconds=(datetime.now(timezone.utc) - start_time).total_seconds(),
             )
             
             return {
@@ -304,3 +390,24 @@ class FetcherService:
         )
         
         return summary
+    
+    def get_storage_stats(self) -> Dict[str, Any]:
+        """
+        Get storage statistics for raw responses.
+        
+        Returns:
+            Dictionary with storage statistics
+        """
+        return self.storage.get_storage_stats()
+    
+    def cleanup_old_responses(self, days_to_keep: int = 30) -> Dict[str, int]:
+        """
+        Clean up old response files.
+        
+        Args:
+            days_to_keep: Number of days to keep files
+            
+        Returns:
+            Dictionary with cleanup statistics
+        """
+        return self.storage.cleanup_old_responses(days_to_keep)
