@@ -1,0 +1,26 @@
+# Core dependencies
+httpx
+pydantic
+redis
+celery
+psycopg2-binary
+python-dotenv
+
+# Database
+supabase
+
+# Queue management
+bullmq
+
+# Testing
+pytest
+pytest-asyncio
+pytest-mock
+
+# Development
+black
+flake8
+mypy
+
+# Monitoring
+structlog

@@ -1,0 +1,52 @@
+name: Coffee Scraping Scheduler
+
+on:
+  schedule:
+    # Full refresh: Monthly on 1st at 03:00 UTC
+    - cron: '0 3 1 * *'
+    # Price-only: Weekly on Sunday at 04:00 UTC  
+    - cron: '0 4 * * 0'
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 'Job type to run'
+        required: true
+        default: 'full_refresh'
+        type: choice
+        options:
+          - full_refresh
+          - price_only
+      roaster_id:
+        description: 'Specific roaster ID (optional)'
+        required: false
+        type: string
+
+jobs:
+  schedule-jobs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          
+      - name: Run scheduler
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          LOG_LEVEL: INFO
+          LOG_FORMAT: json
+        run: |
+          python -m src.scheduler.main \
+            --job-type ${{ github.event.inputs.job_type || (github.event.schedule == '0 3 1 * *' && 'full_refresh' || 'price_only') }} \
+            --roaster-id ${{ github.event.inputs.roaster_id || '' }}

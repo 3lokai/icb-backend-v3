@@ -1,0 +1,48 @@
+name: Test Scheduler
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 'Job type to test'
+        required: true
+        default: 'full_refresh'
+        type: choice
+        options:
+          - full_refresh
+          - price_only
+      roaster_id:
+        description: 'Specific roaster ID to test (optional)'
+        required: false
+        type: string
+
+jobs:
+  test-scheduler:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          
+      - name: Test scheduler with dry run
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          LOG_LEVEL: DEBUG
+          LOG_FORMAT: console
+        run: |
+          python -m src.scheduler.main \
+            --job-type ${{ github.event.inputs.job_type }} \
+            --roaster-id ${{ github.event.inputs.roaster_id || '' }} \
+            --status
