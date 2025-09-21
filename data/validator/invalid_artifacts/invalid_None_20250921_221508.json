@@ -1,0 +1,9 @@
+{
+  "artifact_id": null,
+  "validated_at": "2025-09-21T22:15:08.505079+00:00",
+  "validation_errors": [
+    "Storage read error: 'list' object has no attribute 'get'"
+  ],
+  "validation_warnings": [],
+  "artifact_data": {}
+}

@@ -10,6 +10,8 @@ from pathlib import Path
 from structlog import get_logger
 
 from .artifact_validator import ValidationResult
+from .rpc_client import RPCClient
+from .artifact_mapper import ArtifactMapper
 
 logger = get_logger(__name__)
 
@@ -33,6 +35,8 @@ class DatabaseIntegration:
             supabase_client: Supabase client for database operations
         """
         self.supabase_client = supabase_client
+        self.rpc_client = RPCClient(supabase_client=supabase_client)
+        self.artifact_mapper = ArtifactMapper()
         self.validation_stats = {
             'total_stored': 0,
             'valid_stored': 0,
@@ -341,3 +345,156 @@ class DatabaseIntegration:
             'invalid_stored': 0,
             'error_count': 0
         }
+        self.rpc_client.reset_stats()
+        self.artifact_mapper.reset_stats()
+    
+    def upsert_artifact_via_rpc(
+        self,
+        validation_result: ValidationResult,
+        roaster_id: str,
+        metadata_only: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Upsert artifact via RPC with transaction-like behavior.
+        
+        Args:
+            validation_result: Validation result with artifact data
+            roaster_id: Roaster ID for the artifact
+            metadata_only: Whether this is a metadata-only update
+            
+        Returns:
+            Dictionary with upsert results
+        """
+        if not validation_result.is_valid:
+            return {
+                'success': False,
+                'error': 'Cannot upsert invalid artifact',
+                'artifact_id': getattr(validation_result, 'artifact_id', 'unknown')
+            }
+        
+        try:
+            # Transform artifact to RPC payloads
+            rpc_payloads = self.artifact_mapper.map_artifact_to_rpc_payloads(
+                artifact=validation_result.artifact_data,
+                roaster_id=roaster_id,
+                metadata_only=metadata_only
+            )
+            
+            # Execute RPC calls in sequence (transaction-like behavior)
+            results = {
+                'success': True,
+                'coffee_id': None,
+                'variant_ids': [],
+                'price_ids': [],
+                'image_ids': [],
+                'errors': []
+            }
+            
+            # Upsert coffee record
+            coffee_id = self.rpc_client.upsert_coffee(**rpc_payloads['coffee'])
+            results['coffee_id'] = coffee_id
+            
+            # Upsert variants
+            for variant_payload in rpc_payloads['variants']:
+                variant_payload['p_coffee_id'] = coffee_id
+                variant_id = self.rpc_client.upsert_variant(**variant_payload)
+                results['variant_ids'].append(variant_id)
+            
+            # Insert prices
+            for i, price_payload in enumerate(rpc_payloads['prices']):
+                if i < len(results['variant_ids']):
+                    price_payload['variant_id'] = results['variant_ids'][i]
+                    price_id = self.rpc_client.insert_price(**price_payload)
+                    results['price_ids'].append(price_id)
+            
+            # Upsert images (only if not metadata-only)
+            if not metadata_only:
+                for image_payload in rpc_payloads['images']:
+                    image_payload['p_coffee_id'] = coffee_id
+                    image_id = self.rpc_client.upsert_coffee_image(**image_payload)
+                    results['image_ids'].append(image_id)
+            
+            logger.info(
+                "Successfully upserted artifact via RPC",
+                artifact_id=getattr(validation_result, 'artifact_id', 'unknown'),
+                coffee_id=coffee_id,
+                variants_count=len(results['variant_ids']),
+                prices_count=len(results['price_ids']),
+                images_count=len(results['image_ids'])
+            )
+            
+            return results
+            
+        except Exception as e:
+            logger.error(
+                "Failed to upsert artifact via RPC",
+                artifact_id=getattr(validation_result, 'artifact_id', 'unknown'),
+                error=str(e)
+            )
+            return {
+                'success': False,
+                'error': str(e),
+                'artifact_id': getattr(validation_result, 'artifact_id', 'unknown')
+            }
+    
+    def check_idempotency(
+        self,
+        artifact_id: str,
+        roaster_id: str,
+        platform: str
+    ) -> bool:
+        """
+        Check if artifact has already been processed (idempotency check).
+        
+        Args:
+            artifact_id: Artifact identifier
+            roaster_id: Roaster identifier
+            platform: Platform type
+            
+        Returns:
+            True if already processed, False otherwise
+        """
+        try:
+            if self.supabase_client:
+                # Check if artifact exists in scrape_artifacts table
+                result = self.supabase_client.table("scrape_artifacts").select("id, processed_at").eq("artifact_id", artifact_id).execute()
+                
+                if result.data and len(result.data) > 0:
+                    # Check if it was successfully processed
+                    artifact = result.data[0]
+                    if artifact.get('processed_at'):
+                        logger.info(
+                            "Artifact already processed (idempotency check)",
+                            artifact_id=artifact_id,
+                            processed_at=artifact['processed_at']
+                        )
+                        return True
+                
+                return False
+            else:
+                # Mock idempotency check for testing
+                logger.info("Mock idempotency check", artifact_id=artifact_id)
+                return False
+                
+        except Exception as e:
+            logger.error(
+                "Failed to check idempotency",
+                artifact_id=artifact_id,
+                error=str(e)
+            )
+            return False
+    
+    def get_integration_stats(self) -> Dict[str, Any]:
+        """
+        Get comprehensive integration statistics.
+        
+        Returns:
+            Dictionary with all integration statistics
+        """
+        stats = {
+            'validation': self.get_validation_stats(),
+            'rpc': self.rpc_client.get_rpc_stats(),
+            'mapping': self.artifact_mapper.get_mapping_stats()
+        }
+        
+        return stats

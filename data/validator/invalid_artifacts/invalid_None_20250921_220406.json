@@ -1,0 +1,9 @@
+{
+  "artifact_id": null,
+  "validated_at": "2025-09-21T22:04:06.540340+00:00",
+  "validation_errors": [
+    "Failed to read artifact from storage"
+  ],
+  "validation_warnings": [],
+  "artifact_data": {}
+}

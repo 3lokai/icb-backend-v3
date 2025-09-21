@@ -13,7 +13,9 @@ from .artifact_validator import ArtifactValidator
 from .storage_reader import StorageReader
 from .validation_pipeline import ValidationPipeline
 from .database_integration import DatabaseIntegration
-from .config import ValidatorConfig
+from .rpc_client import RPCClient
+from .artifact_mapper import ArtifactMapper
+from ..config.validator_config import ValidatorConfig
 
 logger = get_logger(__name__)
 
@@ -52,6 +54,8 @@ class ValidatorIntegrationService:
             validator=self.validator
         )
         self.database_integration = DatabaseIntegration(supabase_client=supabase_client)
+        self.rpc_client = RPCClient(supabase_client=supabase_client)
+        self.artifact_mapper = ArtifactMapper()
         
         # Service stats
         self.service_stats = {
@@ -341,6 +345,8 @@ class ValidatorIntegrationService:
         stats['validator_stats'] = self.validator.get_validation_stats()
         stats['pipeline_stats'] = self.validation_pipeline.get_pipeline_stats()
         stats['database_stats'] = self.database_integration.get_validation_stats()
+        stats['rpc_stats'] = self.rpc_client.get_rpc_stats()
+        stats['mapper_stats'] = self.artifact_mapper.get_mapping_stats()
         
         # Calculate success rate
         if stats['total_processed'] > 0:
@@ -369,6 +375,8 @@ class ValidatorIntegrationService:
         self.validator.reset_stats()
         self.validation_pipeline.reset_pipeline_stats()
         self.database_integration.reset_stats()
+        self.rpc_client.reset_stats()
+        self.artifact_mapper.reset_stats()
     
     def health_check(self) -> Dict[str, Any]:
         """
@@ -427,3 +435,248 @@ class ValidatorIntegrationService:
             health_status['overall_status'] = 'degraded'
         
         return health_status
+    
+    def transform_and_upsert_artifacts(
+        self,
+        validation_results: List[Any],
+        roaster_id: str,
+        metadata_only: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Transform validated artifacts to RPC payloads and upsert to database.
+        
+        Args:
+            validation_results: List of validation results with valid artifacts
+            roaster_id: Roaster ID for the artifacts
+            metadata_only: Whether this is a metadata-only update
+            
+        Returns:
+            Dictionary with transformation and upsert results
+        """
+        logger.info(
+            "Starting artifact transformation and upsert",
+            roaster_id=roaster_id,
+            artifact_count=len(validation_results),
+            metadata_only=metadata_only
+        )
+        
+        transformation_results = {
+            'roaster_id': roaster_id,
+            'metadata_only': metadata_only,
+            'total_artifacts': len(validation_results),
+            'successful_transformations': 0,
+            'failed_transformations': 0,
+            'successful_upserts': 0,
+            'failed_upserts': 0,
+            'coffee_ids': [],
+            'variant_ids': [],
+            'price_ids': [],
+            'image_ids': [],
+            'errors': []
+        }
+        
+        for validation_result in validation_results:
+            try:
+                if not validation_result.is_valid:
+                    logger.warning(
+                        "Skipping invalid artifact for transformation",
+                        artifact_id=getattr(validation_result, 'artifact_id', 'unknown')
+                    )
+                    transformation_results['failed_transformations'] += 1
+                    continue
+                
+                # Transform artifact to RPC payloads
+                rpc_payloads = self.artifact_mapper.map_artifact_to_rpc_payloads(
+                    artifact=validation_result.artifact_data,
+                    roaster_id=roaster_id,
+                    metadata_only=metadata_only
+                )
+                
+                transformation_results['successful_transformations'] += 1
+                
+                # Upsert coffee record
+                coffee_id = self.rpc_client.upsert_coffee(**rpc_payloads['coffee'])
+                transformation_results['coffee_ids'].append(coffee_id)
+                transformation_results['successful_upserts'] += 1
+                
+                # Upsert variants
+                for variant_payload in rpc_payloads['variants']:
+                    variant_payload['p_coffee_id'] = coffee_id
+                    variant_id = self.rpc_client.upsert_variant(**variant_payload)
+                    transformation_results['variant_ids'].append(variant_id)
+                    transformation_results['successful_upserts'] += 1
+                
+                # Insert prices - match by variant order
+                variant_ids = transformation_results['variant_ids']
+                for i, price_payload in enumerate(rpc_payloads['prices']):
+                    if i < len(variant_ids):
+                        price_payload['variant_id'] = variant_ids[i]
+                        price_id = self.rpc_client.insert_price(**price_payload)
+                        transformation_results['price_ids'].append(price_id)
+                        transformation_results['successful_upserts'] += 1
+                    else:
+                        logger.warning(
+                            "Price payload index exceeds variant count",
+                            price_index=i,
+                            variant_count=len(variant_ids)
+                        )
+                
+                # Upsert images (only if not metadata-only)
+                if not metadata_only:
+                    for image_payload in rpc_payloads['images']:
+                        image_payload['p_coffee_id'] = coffee_id
+                        image_id = self.rpc_client.upsert_coffee_image(**image_payload)
+                        transformation_results['image_ids'].append(image_id)
+                        transformation_results['successful_upserts'] += 1
+                
+                logger.info(
+                    "Successfully transformed and upserted artifact",
+                    artifact_id=getattr(validation_result, 'artifact_id', 'unknown'),
+                    coffee_id=coffee_id,
+                    variants_count=len(rpc_payloads['variants']),
+                    prices_count=len(rpc_payloads['prices']),
+                    images_count=len(rpc_payloads['images'])
+                )
+                
+            except Exception as e:
+                logger.error(
+                    "Failed to transform and upsert artifact",
+                    artifact_id=getattr(validation_result, 'artifact_id', 'unknown'),
+                    error=str(e)
+                )
+                
+                transformation_results['failed_transformations'] += 1
+                transformation_results['failed_upserts'] += 1
+                transformation_results['errors'].append({
+                    'artifact_id': getattr(validation_result, 'artifact_id', 'unknown'),
+                    'error': str(e)
+                })
+        
+        logger.info(
+            "Completed artifact transformation and upsert",
+            roaster_id=roaster_id,
+            total_artifacts=transformation_results['total_artifacts'],
+            successful_transformations=transformation_results['successful_transformations'],
+            failed_transformations=transformation_results['failed_transformations'],
+            successful_upserts=transformation_results['successful_upserts'],
+            failed_upserts=transformation_results['failed_upserts']
+        )
+        
+        return transformation_results
+    
+    def process_artifacts_with_rpc_upsert(
+        self,
+        roaster_id: str,
+        platform: str,
+        scrape_run_id: str,
+        response_filenames: List[str],
+        metadata_only: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Process artifacts through validation pipeline and upsert to database via RPC.
+        
+        Args:
+            roaster_id: Roaster identifier
+            platform: Platform type
+            scrape_run_id: Scrape run identifier
+            response_filenames: List of response filenames to process
+            metadata_only: Whether this is a metadata-only update
+            
+        Returns:
+            Dictionary with processing results including RPC upsert results
+        """
+        logger.info(
+            "Starting artifact processing with RPC upsert",
+            roaster_id=roaster_id,
+            platform=platform,
+            scrape_run_id=scrape_run_id,
+            artifact_count=len(response_filenames),
+            metadata_only=metadata_only
+        )
+        
+        # Process artifacts through validation pipeline
+        validation_results = self.validation_pipeline.process_storage_artifacts(
+            roaster_id=roaster_id,
+            platform=platform,
+            response_filenames=response_filenames
+        )
+        
+        # Filter to only valid artifacts for RPC transformation
+        valid_artifacts = [result for result in validation_results if result.is_valid]
+        
+        if not valid_artifacts:
+            logger.warning(
+                "No valid artifacts found for RPC transformation",
+                roaster_id=roaster_id,
+                platform=platform,
+                total_artifacts=len(validation_results)
+            )
+            
+            return {
+                'roaster_id': roaster_id,
+                'platform': platform,
+                'scrape_run_id': scrape_run_id,
+                'total_artifacts': len(response_filenames),
+                'valid_artifacts': 0,
+                'invalid_artifacts': len(validation_results),
+                'rpc_transformation': {
+                    'successful_transformations': 0,
+                    'failed_transformations': 0,
+                    'successful_upserts': 0,
+                    'failed_upserts': 0
+                },
+                'success': False,
+                'error': 'No valid artifacts found'
+            }
+        
+        # Transform and upsert valid artifacts
+        rpc_results = self.transform_and_upsert_artifacts(
+            validation_results=valid_artifacts,
+            roaster_id=roaster_id,
+            metadata_only=metadata_only
+        )
+        
+        # Store validation results in database (for audit trail)
+        artifact_ids = self.database_integration.store_batch_validation_results(
+            validation_results=validation_results,
+            scrape_run_id=scrape_run_id,
+            roaster_id=roaster_id,
+            platform=platform,
+            response_filenames=response_filenames
+        )
+        
+        # Update service stats
+        self.service_stats['total_processed'] += len(response_filenames)
+        self.service_stats['successful_validations'] += len(valid_artifacts)
+        self.service_stats['failed_validations'] += len(validation_results) - len(valid_artifacts)
+        
+        # Prepare comprehensive results
+        results = {
+            'roaster_id': roaster_id,
+            'platform': platform,
+            'scrape_run_id': scrape_run_id,
+            'total_artifacts': len(response_filenames),
+            'valid_artifacts': len(valid_artifacts),
+            'invalid_artifacts': len(validation_results) - len(valid_artifacts),
+            'artifact_ids': artifact_ids,
+            'validation_results': validation_results,
+            'rpc_transformation': rpc_results,
+            'processing_time_seconds': (
+                self.service_stats['end_time'] - self.service_stats['start_time']
+            ).total_seconds() if self.service_stats['end_time'] else None,
+            'success': True
+        }
+        
+        logger.info(
+            "Completed artifact processing with RPC upsert",
+            roaster_id=roaster_id,
+            platform=platform,
+            scrape_run_id=scrape_run_id,
+            total_artifacts=results['total_artifacts'],
+            valid_artifacts=results['valid_artifacts'],
+            invalid_artifacts=results['invalid_artifacts'],
+            successful_upserts=rpc_results['successful_upserts'],
+            failed_upserts=rpc_results['failed_upserts']
+        )
+        
+        return results
