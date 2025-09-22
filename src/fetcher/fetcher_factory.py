@@ -17,6 +17,7 @@ def create_fetcher(
     source_config: SourceConfig,
     roaster_config: RoasterConfig,
     auth_credentials: Optional[Dict[str, str]] = None,
+    job_type: str = "full_refresh",
 ) -> BaseFetcher:
     """
     Create a platform-specific fetcher based on configuration.
@@ -25,6 +26,7 @@ def create_fetcher(
         source_config: Product source configuration
         roaster_config: Roaster-specific configuration
         auth_credentials: Authentication credentials (API keys, tokens, etc.)
+        job_type: Type of job ("full_refresh" or "price_only")
         
     Returns:
         Platform-specific fetcher instance
@@ -48,6 +50,7 @@ def create_fetcher(
             roaster_id=source_config.roaster_id,
             base_url=source_config.base_url,
             api_key=api_key,
+            job_type=job_type,
         )
         
         logger.info(
@@ -71,6 +74,7 @@ def create_fetcher(
             consumer_key=consumer_key,
             consumer_secret=consumer_secret,
             jwt_token=jwt_token,
+            job_type=job_type,
         )
         
         logger.info(
@@ -93,6 +97,7 @@ def create_fetcher(
 async def create_fetcher_from_source_id(
     source_id: str,
     auth_credentials: Optional[Dict[str, str]] = None,
+    job_type: str = "full_refresh",
 ) -> BaseFetcher:
     """
     Create a fetcher from a source ID by loading configuration from database.
@@ -100,6 +105,7 @@ async def create_fetcher_from_source_id(
     Args:
         source_id: Product source ID
         auth_credentials: Authentication credentials
+        job_type: Type of job ("full_refresh" or "price_only")
         
     Returns:
         Configured fetcher instance
@@ -111,4 +117,4 @@ async def create_fetcher_from_source_id(
     roaster_config = await config_manager.get_roaster_config(source_config.roaster_id)
     
     # Create fetcher
-    return create_fetcher(source_config, roaster_config, auth_credentials)
+    return create_fetcher(source_config, roaster_config, auth_credentials, job_type)

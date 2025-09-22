@@ -39,6 +39,7 @@ class FetcherService:
         source_id: str,
         auth_credentials: Optional[Dict[str, str]] = None,
         fetch_all: bool = True,
+        job_type: str = "full_refresh",
         **fetch_params
     ) -> Dict[str, Any]:
         """
@@ -48,6 +49,7 @@ class FetcherService:
             source_id: Product source ID
             auth_credentials: Authentication credentials
             fetch_all: Whether to fetch all products or just one page
+            job_type: Type of job ("full_refresh" or "price_only")
             **fetch_params: Additional fetch parameters
             
         Returns:
@@ -60,20 +62,27 @@ class FetcherService:
                 "Starting fetch from source",
                 source_id=source_id,
                 fetch_all=fetch_all,
+                job_type=job_type,
                 fetch_params=fetch_params,
             )
             
             # Create fetcher
-            async with create_fetcher_from_source_id(source_id, auth_credentials) as fetcher:
+            async with create_fetcher_from_source_id(source_id, auth_credentials, job_type) as fetcher:
                 # Test connection first
                 if not await fetcher.test_connection():
                     raise Exception("Connection test failed")
                 
-                # Fetch products
-                if fetch_all:
-                    products = await fetcher.fetch_all_products(**fetch_params)
+                # Fetch products based on job type
+                if job_type == "price_only":
+                    if fetch_all:
+                        products = await fetcher.fetch_price_only_all_products(**fetch_params)
+                    else:
+                        products = await fetcher.fetch_price_only_products(**fetch_params)
                 else:
-                    products = await fetcher.fetch_products(**fetch_params)
+                    if fetch_all:
+                        products = await fetcher.fetch_all_products(**fetch_params)
+                    else:
+                        products = await fetcher.fetch_products(**fetch_params)
                 
                 # Store raw response for validation and replay
                 try:

@@ -15,6 +15,7 @@ from .validation_pipeline import ValidationPipeline
 from .database_integration import DatabaseIntegration
 from .rpc_client import RPCClient
 from .artifact_mapper import ArtifactMapper
+from .raw_artifact_persistence import RawArtifactPersistence
 from ..config.validator_config import ValidatorConfig
 
 logger = get_logger(__name__)
@@ -56,6 +57,10 @@ class ValidatorIntegrationService:
         self.database_integration = DatabaseIntegration(supabase_client=supabase_client)
         self.rpc_client = RPCClient(supabase_client=supabase_client)
         self.artifact_mapper = ArtifactMapper()
+        self.raw_artifact_persistence = RawArtifactPersistence(
+            db_integration=self.database_integration,
+            rpc_client=self.rpc_client
+        )
         
         # Service stats
         self.service_stats = {
@@ -111,6 +116,13 @@ class ValidatorIntegrationService:
                 roaster_id=roaster_id,
                 platform=platform,
                 response_filenames=response_filenames
+            )
+            
+            # Persist raw artifacts for valid results
+            raw_persistence_results = self._persist_raw_artifacts(
+                validation_results=validation_results,
+                roaster_id=roaster_id,
+                platform=platform
             )
             
             # Update service stats
@@ -331,6 +343,100 @@ class ValidatorIntegrationService:
             new_status=new_status,
             manual_review_notes=manual_review_notes
         )
+    
+    def _persist_raw_artifacts(
+        self,
+        validation_results: List[Any],
+        roaster_id: str,
+        platform: str
+    ) -> Dict[str, Any]:
+        """
+        Persist raw artifacts for valid validation results.
+        
+        Args:
+            validation_results: List of validation results
+            roaster_id: Roaster identifier
+            platform: Platform type
+            
+        Returns:
+            Dictionary with raw persistence results
+        """
+        logger.info(
+            "Starting raw artifact persistence",
+            roaster_id=roaster_id,
+            platform=platform,
+            artifact_count=len(validation_results)
+        )
+        
+        persistence_results = {
+            'total_artifacts': len(validation_results),
+            'successful_persistence': 0,
+            'failed_persistence': 0,
+            'persistence_errors': []
+        }
+        
+        for result in validation_results:
+            if not result.is_valid:
+                # Skip invalid artifacts
+                continue
+                
+            try:
+                # Reconstruct ArtifactModel from artifact_data
+                from .models import ArtifactModel
+                artifact = ArtifactModel(**result.artifact_data)
+                
+                # Verify hash integrity before persistence
+                if not self.raw_artifact_persistence.verify_hash_integrity(artifact):
+                    logger.warning(
+                        "Hash integrity check failed for artifact",
+                        artifact_id=artifact.audit.artifact_id
+                    )
+                    persistence_results['failed_persistence'] += 1
+                    persistence_results['persistence_errors'].append(
+                        f"Hash integrity check failed for {artifact.audit.artifact_id}"
+                    )
+                    continue
+                
+                # Persist raw artifact
+                success, error_msg = self.raw_artifact_persistence.persist_raw_artifact(artifact)
+                
+                if success:
+                    persistence_results['successful_persistence'] += 1
+                    logger.info(
+                        "Successfully persisted raw artifact",
+                        artifact_id=artifact.audit.artifact_id
+                    )
+                else:
+                    persistence_results['failed_persistence'] += 1
+                    persistence_results['persistence_errors'].append(
+                        f"Failed to persist {artifact.audit.artifact_id}: {error_msg}"
+                    )
+                    logger.error(
+                        "Failed to persist raw artifact",
+                        artifact_id=artifact.audit.artifact_id,
+                        error=error_msg
+                    )
+                    
+            except Exception as e:
+                persistence_results['failed_persistence'] += 1
+                persistence_results['persistence_errors'].append(
+                    f"Unexpected error persisting {result.artifact_id}: {str(e)}"
+                )
+                logger.error(
+                    "Unexpected error persisting raw artifact",
+                    artifact_id=result.artifact_id,
+                    error=str(e)
+                )
+        
+        logger.info(
+            "Completed raw artifact persistence",
+            roaster_id=roaster_id,
+            platform=platform,
+            successful=persistence_results['successful_persistence'],
+            failed=persistence_results['failed_persistence']
+        )
+        
+        return persistence_results
     
     def get_service_stats(self) -> Dict[str, Any]:
         """

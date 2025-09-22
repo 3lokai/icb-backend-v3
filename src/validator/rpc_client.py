@@ -506,6 +506,177 @@ class RPCClient:
         
         return stats
     
+    def upsert_coffee_with_raw_data(self, coffee_data: Dict[str, Any]) -> bool:
+        """
+        Upsert coffee record with raw artifact data.
+        
+        Args:
+            coffee_data: Dictionary containing coffee data and raw artifact data
+                - source_raw: Raw artifact JSON data
+                - first_seen_at: First seen timestamp
+                - Other coffee fields as needed
+                
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Extract raw artifact data
+            source_raw = coffee_data.get('source_raw', {})
+            first_seen_at = coffee_data.get('first_seen_at')
+            
+            if not source_raw:
+                logger.warning("No source_raw data provided")
+                return False
+            
+            # Call the existing upsert_coffee method with raw data
+            # We'll use minimal required fields and let the RPC handle the rest
+            result = self.upsert_coffee(
+                bean_species=coffee_data.get('bean_species', 'unknown'),
+                name=coffee_data.get('name', 'Unknown Coffee'),
+                slug=coffee_data.get('slug', 'unknown-coffee'),
+                roaster_id=coffee_data.get('roaster_id', 'unknown'),
+                process=coffee_data.get('process', 'unknown'),
+                process_raw=coffee_data.get('process_raw', ''),
+                roast_level=coffee_data.get('roast_level', 'unknown'),
+                roast_level_raw=coffee_data.get('roast_level_raw', ''),
+                roast_style_raw=coffee_data.get('roast_style_raw', ''),
+                description_md=coffee_data.get('description_md', ''),
+                direct_buy_url=coffee_data.get('direct_buy_url', ''),
+                platform_product_id=coffee_data.get('platform_product_id', ''),
+                decaf=coffee_data.get('decaf'),
+                notes_raw=coffee_data.get('notes_raw'),
+                source_raw=source_raw,
+                status=coffee_data.get('status', 'active')
+            )
+            
+            if result:
+                logger.info(f"Successfully upserted coffee with raw data: {result}")
+                return True
+            else:
+                logger.error("Failed to upsert coffee with raw data")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error upserting coffee with raw data: {e}")
+            return False
+
+    def update_variant_pricing(
+        self,
+        variant_id: str,
+        price_current: Optional[float] = None,
+        price_last_checked_at: Optional[str] = None,
+        in_stock: Optional[bool] = None,
+        currency: Optional[str] = None
+    ) -> bool:
+        """
+        Update variant pricing fields using direct table update.
+        
+        Args:
+            variant_id: Variant ID to update
+            price_current: Current price value
+            price_last_checked_at: Last price check timestamp
+            in_stock: Stock availability status
+            currency: Currency code
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            update_data = {}
+            
+            if price_current is not None:
+                update_data['price_current'] = price_current
+            if price_last_checked_at is not None:
+                update_data['price_last_checked_at'] = price_last_checked_at
+            if in_stock is not None:
+                update_data['in_stock'] = in_stock
+            if currency is not None:
+                update_data['currency'] = currency
+            
+            if not update_data:
+                logger.warning("No variant pricing fields to update", variant_id=variant_id)
+                return True
+            
+            # Use direct table update instead of RPC
+            result = self.supabase_client.table("variants").update(update_data).eq("id", variant_id).execute()
+            
+            if result.data:
+                logger.info(
+                    "Successfully updated variant pricing",
+                    variant_id=variant_id,
+                    updated_fields=list(update_data.keys())
+                )
+                return True
+            else:
+                logger.error(
+                    "Failed to update variant pricing - no data returned",
+                    variant_id=variant_id
+                )
+                return False
+                
+        except Exception as e:
+            logger.error(
+                "Failed to update variant pricing",
+                variant_id=variant_id,
+                error=str(e)
+            )
+            return False
+    
+    def batch_update_variant_pricing(
+        self,
+        variant_updates: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Batch update variant pricing for multiple variants.
+        
+        Args:
+            variant_updates: List of variant update dictionaries with 'variant_id' and update fields
+            
+        Returns:
+            Dictionary with batch update results
+        """
+        results = {
+            'total_updates': len(variant_updates),
+            'successful_updates': 0,
+            'failed_updates': 0,
+            'errors': []
+        }
+        
+        for update in variant_updates:
+            try:
+                variant_id = update.get('variant_id')
+                if not variant_id:
+                    results['errors'].append("Missing variant_id in update")
+                    results['failed_updates'] += 1
+                    continue
+                
+                # Remove variant_id from update data
+                update_data = {k: v for k, v in update.items() if k != 'variant_id'}
+                
+                success = self.update_variant_pricing(
+                    variant_id=variant_id,
+                    **update_data
+                )
+                
+                if success:
+                    results['successful_updates'] += 1
+                else:
+                    results['failed_updates'] += 1
+                    results['errors'].append(f"Failed to update variant {variant_id}")
+                    
+            except Exception as e:
+                results['failed_updates'] += 1
+                results['errors'].append(f"Error updating variant {update.get('variant_id', 'unknown')}: {str(e)}")
+        
+        logger.info(
+            "Completed batch variant pricing update",
+            total_updates=results['total_updates'],
+            successful=results['successful_updates'],
+            failed=results['failed_updates']
+        )
+        
+        return results
+
     def reset_stats(self):
         """Reset RPC client statistics."""
         self.rpc_stats = {

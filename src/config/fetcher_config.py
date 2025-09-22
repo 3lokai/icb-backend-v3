@@ -3,7 +3,7 @@ Fetcher configuration management.
 Reads configuration from product_sources table and provides per-roaster settings.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Literal
 from dataclasses import dataclass
 import asyncio
 from supabase import create_client, Client
@@ -36,6 +36,24 @@ class RoasterConfig:
     max_retries: int = 3
     use_firecrawl_fallback: bool = False
     use_llm: bool = False
+
+
+# Job type definitions
+JobType = Literal["full_refresh", "price_only"]
+
+
+@dataclass
+class FetcherJobConfig:
+    """Configuration for a specific fetcher job."""
+    job_type: JobType
+    roaster_id: str
+    concurrency_limit: int = 3
+    timeout_seconds: int = 30
+    price_only_fields: List[str] = None
+    
+    def __post_init__(self):
+        if self.price_only_fields is None:
+            self.price_only_fields = ["price", "availability", "sku"]
 
 
 class FetcherConfigManager:

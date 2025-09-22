@@ -1,0 +1,17 @@
+{
+  "roaster_id": "unknown",
+  "platform": "unknown",
+  "timestamp": "2025-09-22T21:08:07.614546+00:00",
+  "status": "failed",
+  "response_filename": "unknown_unknown_20250922_210807_failed.json",
+  "response_path": "data\\fetcher\\failed\\unknown_unknown_20250922_210807_failed.json",
+  "content_hash": "837ca1ac5f9823196682484090e7ad693878dd497e2235b91878ac6c5cc65bc8",
+  "content_size": 326,
+  "product_count": [],
+  "metadata": {
+    "source_id": "test_source",
+    "fetch_all": false,
+    "fetch_params": {},
+    "error_type": "TypeError"
+  }
+}

@@ -32,8 +32,9 @@ class ShopifyFetcher(BaseFetcher):
         roaster_id: str,
         base_url: str,
         api_key: Optional[str] = None,
+        job_type: str = "full_refresh",
     ):
-        super().__init__(config, roaster_id, base_url, "shopify")
+        super().__init__(config, roaster_id, base_url, "shopify", job_type)
         self.api_key = api_key
         
         # Shopify-specific headers
@@ -48,6 +49,7 @@ class ShopifyFetcher(BaseFetcher):
             roaster_id=roaster_id,
             base_url=base_url,
             has_api_key=bool(api_key),
+            job_type=job_type,
         )
     
     def _build_products_url(self) -> str:
@@ -327,3 +329,146 @@ class ShopifyFetcher(BaseFetcher):
                 error=str(e),
             )
             return False
+    
+    async def fetch_price_only_products(
+        self,
+        limit: int = 50,
+        page: int = 1,
+        **kwargs
+    ) -> List[Dict[str, Any]]:
+        """
+        Fetch products in price-only mode with minimal fields.
+        
+        Args:
+            limit: Number of products per page
+            page: Page number
+            **kwargs: Additional parameters
+            
+        Returns:
+            List of products with price-only data
+        """
+        if self.job_type != "price_only":
+            # Fallback to regular fetch if not in price-only mode
+            return await self.fetch_products(limit, page, **kwargs)
+        
+        try:
+            # Use the same endpoint but with price-only optimization
+            params = {
+                'limit': min(limit, 250),  # Shopify max
+                'page': page,
+                'fields': 'id,title,variants',  # Only fetch essential fields
+            }
+            params.update(kwargs)
+            
+            url = self._build_products_url()
+            
+            status_code, headers, content = await self._make_request(
+                url=url,
+                params=params
+            )
+            
+            if status_code == 200:
+                data = json.loads(content.decode('utf-8'))
+                products = data.get('products', [])
+                
+                # Filter to only include products with variants
+                price_only_products = []
+                for product in products:
+                    variants = product.get('variants', [])
+                    if variants:
+                        # Keep only essential fields for price-only mode
+                        price_only_product = {
+                            'id': product.get('id'),
+                            'title': product.get('title'),
+                            'variants': [
+                                {
+                                    'id': variant.get('id'),
+                                    'price': variant.get('price'),
+                                    'compare_at_price': variant.get('compare_at_price'),
+                                    'available': variant.get('available'),
+                                    'sku': variant.get('sku'),
+                                    'weight': variant.get('weight'),
+                                    'weight_unit': variant.get('weight_unit'),
+                                }
+                                for variant in variants
+                            ]
+                        }
+                        price_only_products.append(price_only_product)
+                
+                logger.info(
+                    "Fetched Shopify price-only products",
+                    roaster_id=self.roaster_id,
+                    page=page,
+                    limit=limit,
+                    products_count=len(price_only_products),
+                )
+                
+                return price_only_products
+            
+            else:
+                logger.error(
+                    "Failed to fetch Shopify price-only products",
+                    roaster_id=self.roaster_id,
+                    page=page,
+                    status_code=status_code,
+                )
+                return []
+        
+        except Exception as e:
+            logger.error(
+                "Error fetching Shopify price-only products",
+                roaster_id=self.roaster_id,
+                page=page,
+                error=str(e),
+            )
+            return []
+    
+    async def fetch_price_only_all_products(self, **kwargs) -> List[Dict[str, Any]]:
+        """
+        Fetch all products in price-only mode with pagination.
+        
+        Args:
+            **kwargs: Additional parameters
+            
+        Returns:
+            List of all products with price-only data
+        """
+        all_products = []
+        page = 1
+        limit = 250  # Use maximum limit for efficiency
+        
+        logger.info(
+            "Starting to fetch all Shopify price-only products",
+            roaster_id=self.roaster_id,
+        )
+        
+        while True:
+            products = await self.fetch_price_only_products(
+                limit=limit,
+                page=page,
+                **kwargs
+            )
+            
+            if not products:
+                break
+            
+            all_products.extend(products)
+            page += 1
+            
+            # Safety limit to prevent infinite loops
+            if page > 100:  # 100 pages * 250 products = 25,000 products max
+                logger.warning(
+                    "Reached safety limit for Shopify price-only fetch",
+                    roaster_id=self.roaster_id,
+                    page=page,
+                )
+                break
+        
+        logger.info(
+            "Completed Shopify price-only fetch",
+            roaster_id=self.roaster_id,
+            total_products=len(all_products),
+            pages_fetched=page - 1,
+        )
+        
+        return all_products

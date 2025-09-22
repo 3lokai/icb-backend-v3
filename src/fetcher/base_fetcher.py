@@ -54,11 +54,13 @@ class BaseFetcher(ABC):
         roaster_id: str,
         base_url: str,
         platform: str,
+        job_type: str = "full_refresh",
     ):
         self.config = config
         self.roaster_id = roaster_id
         self.base_url = base_url.rstrip('/')
         self.platform = platform
+        self.job_type = job_type
         
         # Per-roaster semaphore for concurrency control
         self._semaphore = asyncio.Semaphore(config.max_concurrent)
