@@ -51,7 +51,7 @@ class TestQueueIntegration:
         dequeued_job = await queue_manager.dequeue_job()
         assert dequeued_job is not None
         assert dequeued_job['roaster_id'] == 'test_roaster'
-        assert dequeued_job['data']['job_type'] == 'full_refresh'
+        assert dequeued_job['job_type'] == 'full_refresh'
     
     @pytest.mark.asyncio
     async def test_job_completion(self, queue_manager):
@@ -176,6 +176,9 @@ async def test_queue_integration_workflow():
     try:
         # 2. Connect to queue
         await queue_manager.connect()
+        
+        # Clear any existing jobs in the queue
+        await queue_manager.redis_client.delete("job_queue")
         
         # 3. Enqueue multiple jobs
         job_ids = []

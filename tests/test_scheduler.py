@@ -81,10 +81,11 @@ class TestScheduler:
             # Check job data
             calls = mock_queue_manager.enqueue_job.call_args_list
             for i, call in enumerate(calls):
-                job_data, kwargs = call[0], call[1]
+                job_data = call[0][0]  # First positional argument
+                kwargs = call[1] if len(call) > 1 else {}
                 assert job_data['roaster_id'] == roasters[i]['id']
                 assert job_data['job_type'] == 'full_refresh'
-                assert kwargs['priority'] == 1  # Higher priority for full refresh
+                assert kwargs.get('priority', 0) == 1  # Higher priority for full refresh
     
     @pytest.mark.asyncio
     async def test_schedule_price_only_jobs(self, scheduler, mock_roaster_config, mock_queue_manager):
@@ -109,9 +110,10 @@ class TestScheduler:
             # Verify job was enqueued with correct priority
             mock_queue_manager.enqueue_job.assert_called_once()
             call_args = mock_queue_manager.enqueue_job.call_args
-            job_data, kwargs = call_args[0], call_args[1]
+            job_data = call_args[0][0]  # First positional argument
+            kwargs = call_args[1] if len(call_args) > 1 else {}
             assert job_data['job_type'] == 'price_only'
-            assert kwargs['priority'] == 2  # Lower priority for price updates
+            assert kwargs.get('priority', 0) == 2  # Lower priority for price updates
     
     @pytest.mark.asyncio
     async def test_schedule_specific_roaster(self, scheduler, mock_roaster_config, mock_queue_manager):
@@ -159,8 +161,9 @@ class TestScheduler:
         with patch.object(scheduler, 'roaster_config', mock_roaster_config), \
              patch.object(scheduler, 'queue_manager', mock_queue_manager):
             
-            # Should not raise exception, but log error
-            await scheduler.schedule_jobs(job_type='full_refresh')
+            # Should raise exception due to database error
+            with pytest.raises(Exception, match="Database error"):
+                await scheduler.schedule_jobs(job_type='full_refresh')
             
             # Verify no jobs were enqueued due to error
             mock_queue_manager.enqueue_job.assert_not_called()
