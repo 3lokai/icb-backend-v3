@@ -1,0 +1,244 @@
+{
+  "test_cases": [
+    {
+      "category": "explicit_process_methods",
+      "description": "Explicit process method formats",
+      "test_cases": [
+        {
+          "input": "Washed",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Shopify tag format - Washed"
+        },
+        {
+          "input": "Natural",
+          "expected_enum": "natural",
+          "expected_confidence": 0.95,
+          "description": "Shopify tag format - Natural"
+        },
+        {
+          "input": "Washed Process",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Explicit washed process"
+        },
+        {
+          "input": "Natural Process",
+          "expected_enum": "natural",
+          "expected_confidence": 0.95,
+          "description": "Explicit natural process"
+        },
+        {
+          "input": "Honey Process",
+          "expected_enum": "honey",
+          "expected_confidence": 0.95,
+          "description": "Simple honey process"
+        },
+        {
+          "input": "Anaerobic Process",
+          "expected_enum": "anaerobic",
+          "expected_confidence": 0.95,
+          "description": "Simple anaerobic process"
+        },
+        {
+          "input": "Wet Processed",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Wet processed (washed)"
+        },
+        {
+          "input": "Dry Processed",
+          "expected_enum": "natural",
+          "expected_confidence": 0.95,
+          "description": "Dry processed (natural)"
+        },
+        {
+          "input": "Semi-Washed",
+          "expected_enum": "honey",
+          "expected_confidence": 0.95,
+          "description": "Semi-washed (honey)"
+        },
+        {
+          "input": "Pulped Natural",
+          "expected_enum": "honey",
+          "expected_confidence": 0.95,
+          "description": "Pulped natural (honey)"
+        },
+        {
+          "input": "Fermented",
+          "expected_enum": "anaerobic",
+          "expected_confidence": 0.95,
+          "description": "Fermented (anaerobic)"
+        },
+        {
+          "input": "Co-Fermented",
+          "expected_enum": "anaerobic",
+          "expected_confidence": 0.95,
+          "description": "Co-fermented (anaerobic)"
+        },
+        {
+          "input": "Experimental",
+          "expected_enum": "anaerobic",
+          "expected_confidence": 0.95,
+          "description": "Experimental (anaerobic)"
+        },
+        {
+          "input": "Traditional",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Traditional (washed)"
+        }
+      ]
+    },
+    {
+      "category": "real_world_patterns",
+      "description": "Real-world process method patterns from actual coffee data",
+      "test_cases": [
+        {
+          "input": "Washed",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Shopify tag format - Washed"
+        },
+        {
+          "input": "Natural",
+          "expected_enum": "natural",
+          "expected_confidence": 0.95,
+          "description": "Shopify tag format - Natural"
+        },
+        {
+          "input": "Washed Coffee",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Coffee context with process method"
+        },
+        {
+          "input": "Natural Beans",
+          "expected_enum": "natural",
+          "expected_confidence": 0.95,
+          "description": "Beans context with process method"
+        },
+        {
+          "input": "Process: Washed",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Explicit process label format"
+        }
+      ]
+    },
+    {
+      "category": "ambiguous_formats",
+      "description": "Ambiguous process method formats that need heuristics",
+      "test_cases": [
+        {
+          "input": "process",
+          "expected_enum": "other",
+          "expected_confidence": 0.0,
+          "description": "Generic process term without method"
+        },
+        {
+          "input": "processed",
+          "expected_enum": "other",
+          "expected_confidence": 0.0,
+          "description": "Generic processed term without method"
+        },
+        {
+          "input": "processing",
+          "expected_enum": "other",
+          "expected_confidence": 0.0,
+          "description": "Generic processing term without method"
+        },
+        {
+          "input": "method",
+          "expected_enum": "other",
+          "expected_confidence": 0.0,
+          "description": "Generic method term without process type"
+        },
+        {
+          "input": "technique",
+          "expected_enum": "other",
+          "expected_confidence": 0.0,
+          "description": "Generic technique term without process type"
+        }
+      ]
+    },
+    {
+      "category": "edge_cases",
+      "description": "Edge cases and malformed input",
+      "test_cases": [
+        {
+          "input": "Process: Washed",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Formatted process method"
+        },
+        {
+          "input": "Washed Process Coffee",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Process method with context"
+        },
+        {
+          "input": "  Washed Process ",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Whitespace handling"
+        },
+        {
+          "input": "Washed Process,",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Trailing comma"
+        },
+        {
+          "input": "",
+          "expected_enum": "other",
+          "expected_confidence": 0.0,
+          "description": "Empty string"
+        },
+        {
+          "input": "none",
+          "expected_enum": "other",
+          "expected_confidence": 0.0,
+          "description": "Null value"
+        },
+        {
+          "input": "Unknown",
+          "expected_enum": "other",
+          "expected_confidence": 0.95,
+          "description": "Explicit unknown"
+        },
+        {
+          "input": "Not Specified",
+          "expected_enum": "other",
+          "expected_confidence": 0.95,
+          "description": "Not specified"
+        }
+      ]
+    },
+    {
+      "category": "unicode_special",
+      "description": "Unicode and special characters",
+      "test_cases": [
+        {
+          "input": "Washed Process",
+          "expected_enum": "washed",
+          "expected_confidence": 0.95,
+          "description": "Unicode process method"
+        },
+        {
+          "input": "Natural Process",
+          "expected_enum": "natural",
+          "expected_confidence": 0.95,
+          "description": "Unicode natural process"
+        }
+      ]
+    }
+  ],
+  "performance_requirements": {
+    "min_accuracy": 0.95,
+    "max_parsing_time_ms": 1.0,
+    "batch_processing_target": 1000
+  },
+  "total_test_cases": 25
+}

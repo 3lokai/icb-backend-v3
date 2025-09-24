@@ -1,0 +1,232 @@
+{
+  "test_cases": [
+    {
+      "category": "explicit_roast_levels",
+      "description": "Explicit roast level formats",
+      "test_cases": [
+        {
+          "input": "Light Roast",
+          "expected_enum": "light",
+          "expected_confidence": 0.95,
+          "description": "Simple light roast"
+        },
+        {
+          "input": "Medium Roast",
+          "expected_enum": "medium",
+          "expected_confidence": 0.95,
+          "description": "Simple medium roast"
+        },
+        {
+          "input": "Dark Roast",
+          "expected_enum": "dark",
+          "expected_confidence": 0.95,
+          "description": "Simple dark roast"
+        },
+        {
+          "input": "Light-Medium Roast",
+          "expected_enum": "light-medium",
+          "expected_confidence": 0.95,
+          "description": "Light-medium roast"
+        },
+        {
+          "input": "Medium-Dark Roast",
+          "expected_enum": "medium-dark",
+          "expected_confidence": 0.95,
+          "description": "Medium-dark roast"
+        },
+        {
+          "input": "Cinnamon Roast",
+          "expected_enum": "light",
+          "expected_confidence": 0.95,
+          "description": "Cinnamon roast (light)"
+        },
+        {
+          "input": "City Roast",
+          "expected_enum": "light",
+          "expected_confidence": 0.95,
+          "description": "City roast (light)"
+        },
+        {
+          "input": "Full City Roast",
+          "expected_enum": "light-medium",
+          "expected_confidence": 0.95,
+          "description": "Full city roast (light-medium)"
+        },
+        {
+          "input": "Vienna Roast",
+          "expected_enum": "medium-dark",
+          "expected_confidence": 0.95,
+          "description": "Vienna roast (medium-dark)"
+        },
+        {
+          "input": "French Roast",
+          "expected_enum": "dark",
+          "expected_confidence": 0.95,
+          "description": "French roast (dark)"
+        },
+        {
+          "input": "Italian Roast",
+          "expected_enum": "dark",
+          "expected_confidence": 0.95,
+          "description": "Italian roast (dark)"
+        },
+        {
+          "input": "Espresso Roast",
+          "expected_enum": "dark",
+          "expected_confidence": 0.95,
+          "description": "Espresso roast (dark)"
+        }
+      ]
+    },
+    {
+      "category": "real_world_patterns",
+      "description": "Real-world roast level patterns from actual coffee data",
+      "test_cases": [
+        {
+          "input": "Roast Profile : Dark Roast",
+          "expected_enum": "dark",
+          "expected_confidence": 0.95,
+          "description": "WooCommerce style roast profile"
+        },
+        {
+          "input": "medium-dark profile",
+          "expected_enum": "medium-dark",
+          "expected_confidence": 0.95,
+          "description": "Shopify style roast profile"
+        },
+        {
+          "input": "Light Roast Coffee",
+          "expected_enum": "light",
+          "expected_confidence": 0.95,
+          "description": "Coffee context with roast level"
+        },
+        {
+          "input": "Medium Roasted Beans",
+          "expected_enum": "medium",
+          "expected_confidence": 0.95,
+          "description": "Roasted beans context"
+        },
+        {
+          "input": "Dark Roast Blend",
+          "expected_enum": "dark",
+          "expected_confidence": 0.95,
+          "description": "Roast blend context"
+        }
+      ]
+    },
+    {
+      "category": "ambiguous_formats",
+      "description": "Ambiguous roast level formats that need heuristics",
+      "test_cases": [
+        {
+          "input": "roast",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.0,
+          "description": "Generic roast term without level"
+        },
+        {
+          "input": "roasted",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.0,
+          "description": "Generic roasted term without level"
+        },
+        {
+          "input": "roasting",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.0,
+          "description": "Generic roasting term without level"
+        },
+        {
+          "input": "level",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.0,
+          "description": "Generic level term without roast type"
+        },
+        {
+          "input": "profile",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.0,
+          "description": "Generic profile term without roast type"
+        }
+      ]
+    },
+    {
+      "category": "edge_cases",
+      "description": "Edge cases and malformed input",
+      "test_cases": [
+        {
+          "input": "Roast Level: Medium",
+          "expected_enum": "medium",
+          "expected_confidence": 0.95,
+          "description": "Formatted roast level"
+        },
+        {
+          "input": "Medium Roast Coffee",
+          "expected_enum": "medium",
+          "expected_confidence": 0.95,
+          "description": "Roast level with context"
+        },
+        {
+          "input": "  Medium Roast ",
+          "expected_enum": "medium",
+          "expected_confidence": 0.95,
+          "description": "Whitespace handling"
+        },
+        {
+          "input": "Medium Roast,",
+          "expected_enum": "medium",
+          "expected_confidence": 0.95,
+          "description": "Trailing comma"
+        },
+        {
+          "input": "",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.0,
+          "description": "Empty string"
+        },
+        {
+          "input": "none",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.0,
+          "description": "Null value"
+        },
+        {
+          "input": "Unknown",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.95,
+          "description": "Explicit unknown"
+        },
+        {
+          "input": "Not Specified",
+          "expected_enum": "unknown",
+          "expected_confidence": 0.95,
+          "description": "Not specified"
+        }
+      ]
+    },
+    {
+      "category": "unicode_special",
+      "description": "Unicode and special characters",
+      "test_cases": [
+        {
+          "input": "Medium Roast",
+          "expected_enum": "medium",
+          "expected_confidence": 0.95,
+          "description": "Unicode roast level"
+        },
+        {
+          "input": "Dark Roast",
+          "expected_enum": "dark",
+          "expected_confidence": 0.95,
+          "description": "Unicode dark roast"
+        }
+      ]
+    }
+  ],
+  "performance_requirements": {
+    "min_accuracy": 0.95,
+    "max_parsing_time_ms": 1.0,
+    "batch_processing_target": 1000
+  },
+  "total_test_cases": 25
+}

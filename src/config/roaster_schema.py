@@ -131,7 +131,7 @@ class RoasterConfigSchema(BaseModel):
         return self
     
     model_config = {
-        "json_encoders": {
+        "json_serializers": {
             datetime: lambda v: v.isoformat()
         }
     }

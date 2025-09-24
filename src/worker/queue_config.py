@@ -11,7 +11,7 @@ This module provides:
 import asyncio
 import os
 from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import redis.asyncio as redis
 import structlog
@@ -75,7 +75,7 @@ class QueueHealthChecker:
             redis_info = await self._get_redis_info()
             
             self.health_status = 'healthy'
-            self.last_health_check = datetime.utcnow()
+            self.last_health_check = datetime.now(timezone.utc)
             
             return {
                 'status': 'healthy',
@@ -86,7 +86,7 @@ class QueueHealthChecker:
             
         except Exception as e:
             self.health_status = 'unhealthy'
-            self.last_health_check = datetime.utcnow()
+            self.last_health_check = datetime.now(timezone.utc)
             
             logger.error("Queue health check failed", error=str(e), exc_info=True)
             

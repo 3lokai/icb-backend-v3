@@ -11,7 +11,7 @@ This module implements:
 import asyncio
 import httpx
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 import structlog
 
@@ -87,7 +87,7 @@ async def _execute_placeholder_task(job_data: Dict[str, Any], config: Dict[str, 
         "status": "completed",
         "job_type": job_type,
         "roaster_id": roaster_id,
-        "processed_at": datetime.utcnow().isoformat(),
+        "processed_at": datetime.now(timezone.utc).isoformat(),
         "items_processed": 42,  # Placeholder
         "errors": 0
     }

@@ -17,6 +17,13 @@ from .rpc_client import RPCClient
 from .artifact_mapper import ArtifactMapper
 from .raw_artifact_persistence import RawArtifactPersistence
 from ..config.validator_config import ValidatorConfig
+from ..config.imagekit_config import ImageKitConfig
+from ..images.deduplication_service import ImageDeduplicationService
+from ..images.imagekit_service import ImageKitService
+from ..images.imagekit_integration import ImageKitIntegrationService
+from ..parser.weight_parser import WeightParser
+from ..parser.roast_parser import RoastLevelParser
+from ..parser.process_parser import ProcessMethodParser
 
 logger = get_logger(__name__)
 
@@ -56,11 +63,49 @@ class ValidatorIntegrationService:
         )
         self.database_integration = DatabaseIntegration(supabase_client=supabase_client)
         self.rpc_client = RPCClient(supabase_client=supabase_client)
-        self.artifact_mapper = ArtifactMapper()
         self.raw_artifact_persistence = RawArtifactPersistence(
             db_integration=self.database_integration,
             rpc_client=self.rpc_client
         )
+        
+        # Initialize image processing services
+        if self.config.enable_image_deduplication:
+            self.image_deduplication_service = ImageDeduplicationService(self.rpc_client)
+        else:
+            self.image_deduplication_service = None
+        
+        if self.config.enable_imagekit_upload and self.config.imagekit_config:
+            self.imagekit_service = ImageKitService(self.config.imagekit_config)
+            self.imagekit_integration = ImageKitIntegrationService(
+                rpc_client=self.rpc_client,
+                imagekit_config=self.config.imagekit_config,
+                enable_deduplication=self.config.enable_image_deduplication,
+                enable_imagekit=self.config.enable_imagekit_upload
+            )
+        else:
+            self.imagekit_service = None
+            self.imagekit_integration = None
+        
+        # Initialize weight parser service
+        if self.config.enable_weight_parsing:
+            self.weight_parser = WeightParser()
+        else:
+            self.weight_parser = None
+        
+        # Initialize roast parser service
+        if self.config.enable_roast_parsing:
+            self.roast_parser = RoastLevelParser()
+        else:
+            self.roast_parser = None
+        
+        # Initialize process parser service
+        if self.config.enable_process_parsing:
+            self.process_parser = ProcessMethodParser()
+        else:
+            self.process_parser = None
+        
+        # Initialize artifact mapper after image services
+        self.artifact_mapper = ArtifactMapper(integration_service=self)
         
         # Service stats
         self.service_stats = {

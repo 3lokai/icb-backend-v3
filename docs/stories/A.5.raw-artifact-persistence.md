@@ -1,7 +1,7 @@
 # Story A.5: Raw artifact persistence (raw_payload & hashes)
 
 ## Status
-Ready for Review
+Ready for Done
 
 ## Story
 **As a** system administrator,

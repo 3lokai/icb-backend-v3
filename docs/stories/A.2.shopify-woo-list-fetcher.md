@@ -1,7 +1,7 @@
 # Story A.2: Shopify/Woo list fetcher (paginated)
 
 ## Status
-Ready for Review
+Ready for Done
 
 ## Story
 **As a** system administrator,

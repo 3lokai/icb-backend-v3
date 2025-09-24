@@ -1,7 +1,7 @@
 # Story B.1: Price-only fetcher path
 
 ## Status
-Ready for Review
+Ready for Done
 
 ## Story
 **As a** system administrator,

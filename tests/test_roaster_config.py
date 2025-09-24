@@ -9,7 +9,7 @@ This module tests:
 """
 
 import pytest
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import ValidationError
 
 from src.config.roaster_schema import (
@@ -150,7 +150,7 @@ class TestRoasterConfigSchema:
                 'pages': '/pages.json'
             },
             'last_etag': 'abc123',
-            'last_modified': datetime.utcnow()
+            'last_modified': datetime.now(timezone.utc)
         }
         
         schema = RoasterConfigSchema(**config)
@@ -377,7 +377,7 @@ class TestRoasterConfigIntegration:
                 'blogs': '/blogs.json'
             },
             'last_etag': 'etag123',
-            'last_modified': datetime.utcnow()
+            'last_modified': datetime.now(timezone.utc)
         }
         
         validated = RoasterConfigValidator.validate_config(full_config)

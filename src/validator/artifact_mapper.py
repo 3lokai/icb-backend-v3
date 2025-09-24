@@ -9,6 +9,36 @@ from structlog import get_logger
 
 from .models import ArtifactModel, VariantModel, ProductModel, NormalizationModel
 
+# Import weight parser for enhanced weight parsing
+try:
+    from ..parser.weight_parser import WeightParser
+except ImportError:
+    # Fallback for when weight parser is not available
+    WeightParser = None
+
+# Import roast and process parsers for enhanced parsing
+try:
+    from ..parser.roast_parser import RoastLevelParser
+    from ..parser.process_parser import ProcessMethodParser
+except ImportError:
+    # Fallback for when parsers are not available
+    RoastLevelParser = None
+    ProcessMethodParser = None
+
+# Import image deduplication service
+try:
+    from ..images.deduplication_service import ImageDeduplicationService
+    from ..images.hash_computation import ImageHashComputer
+    from ..images.imagekit_integration import ImageKitIntegrationService
+    from ..images.processing_guard import ImageProcessingGuard, guard_image_operation
+    from ..config.imagekit_config import ImageKitConfig
+except ImportError:
+    # Fallback for when image services are not available
+    ImageDeduplicationService = None
+    ImageHashComputer = None
+    ImageProcessingGuard = None
+    guard_image_operation = None
+
 logger = get_logger(__name__)
 
 
@@ -23,8 +53,26 @@ class ArtifactMapper:
     - Currency validation and normalization
     """
     
-    def __init__(self):
-        """Initialize artifact mapper."""
+    def __init__(
+        self, 
+        rpc_client=None, 
+        enable_image_deduplication=True,
+        enable_imagekit=False,
+        imagekit_config=None,
+        integration_service=None,
+        metadata_only=False
+    ):
+        """
+        Initialize artifact mapper.
+        
+        Args:
+            rpc_client: RPC client for database operations (required for deduplication)
+            enable_image_deduplication: Whether to enable image deduplication
+            enable_imagekit: Whether to enable ImageKit CDN upload
+            imagekit_config: ImageKit configuration (required if enable_imagekit=True)
+            integration_service: ValidatorIntegrationService instance (preferred over individual params)
+            metadata_only: Whether this is a metadata-only (price-only) run
+        """
         self.mapping_stats = {
             'total_mapped': 0,
             'coffee_mapped': 0,
@@ -33,6 +81,74 @@ class ArtifactMapper:
             'images_mapped': 0,
             'mapping_errors': 0
         }
+        
+        # Initialize weight parser for enhanced weight parsing
+        if integration_service:
+            # Use weight parser from integration service
+            self.weight_parser = integration_service.weight_parser
+        else:
+            # Fallback to individual initialization (legacy support)
+            self.weight_parser = WeightParser() if WeightParser else None
+        
+        # Initialize roast and process parsers for enhanced parsing
+        self.roast_parser = RoastLevelParser() if RoastLevelParser else None
+        self.process_parser = ProcessMethodParser() if ProcessMethodParser else None
+        
+        # Initialize image services from integration service or individual parameters
+        if integration_service:
+            # Use services from integration service
+            self.deduplication_service = integration_service.image_deduplication_service
+            self.imagekit_integration = integration_service.imagekit_integration
+            self.enable_image_deduplication = integration_service.config.enable_image_deduplication
+            self.enable_imagekit = integration_service.config.enable_imagekit_upload
+        else:
+            # Initialize image deduplication service
+            self.enable_image_deduplication = enable_image_deduplication
+            self.deduplication_service = None
+            
+            if enable_image_deduplication and rpc_client and ImageDeduplicationService:
+                try:
+                    self.deduplication_service = ImageDeduplicationService(rpc_client)
+                    logger.info("Image deduplication service initialized")
+                except Exception as e:
+                    logger.warning(
+                        "Failed to initialize image deduplication service",
+                        error=str(e)
+                    )
+                    self.deduplication_service = None
+            
+            # Initialize ImageKit integration service
+            self.enable_imagekit = enable_imagekit
+            self.imagekit_config = imagekit_config
+            self.imagekit_integration = None
+            
+            if enable_imagekit and rpc_client and imagekit_config and ImageKitIntegrationService:
+                try:
+                    self.imagekit_integration = ImageKitIntegrationService(
+                        rpc_client=rpc_client,
+                        imagekit_config=imagekit_config,
+                        enable_deduplication=enable_image_deduplication,
+                        enable_imagekit=True
+                    )
+                    logger.info("ImageKit integration service initialized")
+                except Exception as e:
+                    logger.warning(
+                        "Failed to initialize ImageKit integration service",
+                        error=str(e)
+                    )
+                    self.imagekit_integration = None
+        
+        # Initialize image processing guard
+        self.metadata_only = metadata_only
+        if ImageProcessingGuard:
+            self.image_guard = ImageProcessingGuard(metadata_only=metadata_only)
+            logger.info(
+                "Image processing guard initialized",
+                metadata_only=metadata_only
+            )
+        else:
+            self.image_guard = None
+            logger.warning("Image processing guard not available")
     
     def map_artifact_to_rpc_payloads(
         self,
@@ -66,7 +182,11 @@ class ArtifactMapper:
             # Map images data (only if not metadata-only)
             images_payloads = []
             if not metadata_only:
-                images_payloads = self._map_images_data(artifact)
+                # Note: coffee_id will be available after coffee upsert in the pipeline
+                # For now, we'll process images without coffee_id (deduplication will work at image level)
+                # Use a temporary coffee_id for deduplication if service is available
+                temp_coffee_id = f"temp-{artifact.product.platform_product_id}" if self.deduplication_service else None
+                images_payloads = self._map_images_data(artifact, coffee_id=temp_coffee_id)
             
             result = {
                 'coffee': coffee_payload,
@@ -187,6 +307,7 @@ class ArtifactMapper:
                 if pack_count:
                     variant_payload['p_pack_count'] = pack_count
                 
+                
                 variants_payloads.append(variant_payload)
                 self.mapping_stats['variants_mapped'] += 1
                 
@@ -243,9 +364,205 @@ class ArtifactMapper:
         
         return prices_payloads
     
-    def _map_images_data(self, artifact: ArtifactModel) -> List[Dict[str, Any]]:
+    def _map_images_data(self, artifact: ArtifactModel, coffee_id: str = None) -> List[Dict[str, Any]]:
         """
-        Map artifact images to RPC payloads.
+        Map artifact images to RPC payloads with deduplication support.
+        
+        Args:
+            artifact: Canonical artifact model
+            coffee_id: Coffee ID for deduplication (optional)
+            
+        Returns:
+            List of image RPC payloads
+        """
+        # Check if image processing is allowed (guard enforcement)
+        if self.image_guard and not self.image_guard.check_image_processing_allowed("map_images_data"):
+            logger.info(
+                "Image processing blocked by guard for price-only run",
+                operation="map_images_data",
+                metadata_only=self.metadata_only
+            )
+            return []
+        images_payloads = []
+        
+        if artifact.product.images:
+            # Process images with deduplication service if available
+            if self.deduplication_service and coffee_id:
+                try:
+                    # Prepare image data for deduplication
+                    images_data = []
+                    for i, image in enumerate(artifact.product.images):
+                        image_data = {
+                            'url': image.url,
+                            'alt': image.alt_text or '',
+                            'width': getattr(image, 'width', None),
+                            'height': getattr(image, 'height', None),
+                            'sort_order': image.order or i,
+                            'source_raw': {
+                                'source_id': image.source_id,
+                                'scraped_at': artifact.scraped_at.isoformat()
+                            }
+                        }
+                        images_data.append(image_data)
+                    
+                    # Process images with deduplication
+                    processed_images = self.deduplication_service.process_batch_with_deduplication(
+                        images_data, coffee_id
+                    )
+                    
+                    # Convert processed results to RPC payloads
+                    for processed_image in processed_images:
+                        if 'error' in processed_image:
+                            logger.warning(
+                                "Failed to process image with deduplication",
+                                image_url=processed_image.get('url'),
+                                error=processed_image['error']
+                            )
+                            continue
+                        
+                        # Create RPC payload for image
+                        image_payload = {
+                            'p_url': processed_image['url'],
+                            'p_alt': processed_image.get('alt', ''),
+                            'p_sort_order': processed_image.get('sort_order', 0),
+                            'p_source_raw': processed_image.get('source_raw', {}),
+                            'p_content_hash': processed_image.get('content_hash'),
+                            'p_deduplication_status': processed_image.get('deduplication_status', 'unknown')
+                        }
+                        
+                        # Add existing image ID if it's a duplicate
+                        if processed_image.get('is_duplicate') and processed_image.get('image_id'):
+                            image_payload['p_existing_image_id'] = processed_image['image_id']
+                        
+                        # Add dimensions if available
+                        if processed_image.get('width'):
+                            image_payload['p_width'] = processed_image['width']
+                        if processed_image.get('height'):
+                            image_payload['p_height'] = processed_image['height']
+                        
+                        images_payloads.append(image_payload)
+                        self.mapping_stats['images_mapped'] += 1
+                    
+                    logger.info(
+                        "Processed images with deduplication",
+                        total_images=len(artifact.product.images),
+                        processed_count=len(images_payloads)
+                    )
+                    
+                except Exception as e:
+                    logger.error(
+                        "Failed to process images with deduplication service",
+                        error=str(e)
+                    )
+                    # Fall back to standard processing
+                    images_payloads = self._map_images_data_standard(artifact)
+            # Process images with ImageKit integration if service is available
+            elif self.imagekit_integration and coffee_id:
+                try:
+                    # Prepare image data for deduplication
+                    images_data = []
+                    for i, image in enumerate(artifact.product.images):
+                        image_data = {
+                            'url': image.url,
+                            'alt': image.alt_text or '',
+                            'width': getattr(image, 'width', None),
+                            'height': getattr(image, 'height', None),
+                            'sort_order': image.order or i,
+                            'source_raw': {
+                                'source_id': image.source_id,
+                                'scraped_at': artifact.scraped_at.isoformat()
+                            }
+                        }
+                        images_data.append(image_data)
+                    
+                    # Process images with ImageKit integration
+                    processed_images = self.imagekit_integration.process_batch_with_imagekit(
+                        images_data, coffee_id
+                    )
+                    
+                    # Convert processed results to RPC payloads
+                    for processed_image in processed_images:
+                        if 'integration_error' in processed_image:
+                            logger.warning(
+                                "Failed to process image with ImageKit integration",
+                                image_url=processed_image.get('url'),
+                                error=processed_image['integration_error']
+                            )
+                            continue
+                        
+                        # Create RPC payload
+                        image_payload = {
+                            'p_url': processed_image['url'],
+                            'p_alt': processed_image.get('alt', ''),
+                            'p_sort_order': processed_image.get('sort_order', 0),
+                            'p_source_raw': processed_image.get('source_raw', {})
+                        }
+                        
+                        # Add dimensions if available
+                        if processed_image.get('width'):
+                            image_payload['p_width'] = processed_image['width']
+                        if processed_image.get('height'):
+                            image_payload['p_height'] = processed_image['height']
+                        
+                        # Add content hash for deduplication
+                        if processed_image.get('content_hash'):
+                            image_payload['p_content_hash'] = processed_image['content_hash']
+                        
+                        # Add ImageKit URL if available
+                        if processed_image.get('imagekit_url'):
+                            image_payload['p_imagekit_url'] = processed_image['imagekit_url']
+                        
+                        # Add processing metadata
+                        if processed_image.get('imagekit_upload_skipped'):
+                            image_payload['p_processing_status'] = 'skipped_duplicate'
+                            image_payload['p_existing_image_id'] = processed_image.get('existing_image_id')
+                        elif processed_image.get('imagekit_upload_failed'):
+                            image_payload['p_processing_status'] = 'imagekit_failed'
+                            image_payload['p_fallback_url'] = processed_image.get('fallback_url')
+                        else:
+                            image_payload['p_processing_status'] = 'processed'
+                        
+                        images_payloads.append(image_payload)
+                        self.mapping_stats['images_mapped'] += 1
+                        
+                        # Log processing result
+                        if processed_image.get('imagekit_upload_skipped'):
+                            logger.info(
+                                "ImageKit integration: duplicate skipped",
+                                image_url=processed_image['url'],
+                                existing_image_id=processed_image.get('existing_image_id')
+                            )
+                        elif processed_image.get('imagekit_upload_failed'):
+                            logger.warning(
+                                "ImageKit integration: upload failed, using fallback",
+                                image_url=processed_image['url'],
+                                fallback_url=processed_image.get('fallback_url'),
+                                error=processed_image.get('imagekit_error')
+                            )
+                        else:
+                            logger.info(
+                                "ImageKit integration: image processed successfully",
+                                image_url=processed_image['url'],
+                                imagekit_url=processed_image.get('imagekit_url'),
+                                content_hash=processed_image.get('content_hash')
+                            )
+                    
+                except Exception as e:
+                    logger.error(
+                        "Failed to process images with ImageKit integration, falling back to standard processing",
+                        error=str(e)
+                    )
+                    # Fall back to standard processing
+                    images_payloads = self._map_images_data_standard(artifact)
+            else:
+                # Standard processing without ImageKit integration
+                images_payloads = self._map_images_data_standard(artifact)
+        
+        return images_payloads
+    
+    def _map_images_data_standard(self, artifact: ArtifactModel) -> List[Dict[str, Any]]:
+        """
+        Standard image mapping without deduplication.
         
         Args:
             artifact: Canonical artifact model
@@ -287,11 +604,11 @@ class ArtifactMapper:
         
         return images_payloads
     
-    def _map_bean_species(self, normalization: Optional[NormalizationModel]) -> str:
+    def _map_bean_species(self, normalization: Optional[NormalizationModel]) -> Optional[str]:
         """Map bean species from normalization data."""
         if normalization and normalization.bean_species:
             return normalization.bean_species.value
-        return 'arabica'  # Default to arabica
+        return None  # Return None when not defined
     
     def _map_coffee_name(self, product: ProductModel, normalization: Optional[NormalizationModel]) -> str:
         """Map coffee name from product and normalization data."""
@@ -309,29 +626,29 @@ class ArtifactMapper:
             # Generate slug from title
             return product.title.lower().replace(' ', '-').replace('_', '-')
     
-    def _map_process(self, normalization: Optional[NormalizationModel]) -> str:
+    def _map_process(self, normalization: Optional[NormalizationModel]) -> Optional[str]:
         """Map process method from normalization data."""
         if normalization and normalization.process_enum:
             return normalization.process_enum.value
-        return 'other'  # Default to other
+        return None  # Return None when not defined
     
-    def _map_process_raw(self, normalization: Optional[NormalizationModel]) -> str:
+    def _map_process_raw(self, normalization: Optional[NormalizationModel]) -> Optional[str]:
         """Map raw process description from normalization data."""
         if normalization and normalization.process_raw:
             return normalization.process_raw
-        return 'Unknown'  # Default
+        return None  # Return None when not defined
     
-    def _map_roast_level(self, normalization: Optional[NormalizationModel]) -> str:
+    def _map_roast_level(self, normalization: Optional[NormalizationModel]) -> Optional[str]:
         """Map roast level from normalization data."""
         if normalization and normalization.roast_level_enum:
             return normalization.roast_level_enum.value
-        return 'unknown'  # Default
+        return None  # Return None when not defined
     
-    def _map_roast_level_raw(self, normalization: Optional[NormalizationModel]) -> str:
+    def _map_roast_level_raw(self, normalization: Optional[NormalizationModel]) -> Optional[str]:
         """Map raw roast level description from normalization data."""
         if normalization and normalization.roast_level_raw:
             return normalization.roast_level_raw
-        return 'Unknown'  # Default
+        return None  # Return None when not defined
     
     def _map_roast_style_raw(self, normalization: Optional[NormalizationModel]) -> str:
         """Map roast style description from normalization data."""
@@ -352,14 +669,41 @@ class ArtifactMapper:
             return 'No description available'
     
     def _map_weight_grams(self, variant: VariantModel) -> int:
-        """Map variant weight to grams."""
-        if variant.grams:
-            return variant.grams
-        elif variant.weight_unit and variant.weight_unit.value == 'kg':
-            # Convert kg to grams (assuming we have a weight value)
-            return 1000  # Default 1kg
-        else:
-            return 250  # Default 250g
+        """Map variant weight to grams using enhanced weight parser."""
+        try:
+            # If we already have grams, use them
+            if variant.grams:
+                return variant.grams
+            
+            # Try to parse weight from variant title using weight parser
+            if self.weight_parser and variant.title:
+                weight_result = self.weight_parser.parse_weight(variant.title)
+                if weight_result.grams > 0:
+                    logger.debug(
+                        "Parsed weight from variant title",
+                        variant_id=variant.platform_variant_id,
+                        title=variant.title,
+                        parsed_grams=weight_result.grams,
+                        confidence=weight_result.confidence
+                    )
+                    return weight_result.grams
+            
+            # Fallback to weight unit conversion if available
+            if variant.weight_unit and variant.weight_unit.value == 'kg':
+                # Convert kg to grams (assuming we have a weight value)
+                return 1000  # Default 1kg
+            else:
+                return 250  # Default 250g
+                
+        except Exception as e:
+            logger.warning(
+                "Failed to parse weight from variant",
+                variant_id=variant.platform_variant_id,
+                title=variant.title,
+                error=str(e)
+            )
+            # Return default weight
+            return 250
     
     def _normalize_currency(self, currency: Optional[str]) -> str:
         """Normalize currency code."""
@@ -516,3 +860,4 @@ class ArtifactMapper:
             'images_mapped': 0,
             'mapping_errors': 0
         }
+    

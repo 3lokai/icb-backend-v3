@@ -1,7 +1,7 @@
 # Story B.3: Price job monitoring & backoff
 
 ## Status
-Ready for Review
+Ready for Done
 
 ## Story
 **As a** system administrator,

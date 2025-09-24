@@ -1,0 +1,166 @@
+{
+  "test_images": [
+    {
+      "url": "https://example.com/coffee1.jpg",
+      "alt": "Ethiopian Yirgacheffe Coffee",
+      "width": 800,
+      "height": 600,
+      "sort_order": 1,
+      "source_raw": {
+        "source_id": "img_001",
+        "scraped_at": "2024-01-15T10:30:00Z"
+      }
+    },
+    {
+      "url": "https://example.com/coffee2.jpg",
+      "alt": "Colombian Supremo Coffee",
+      "width": 1024,
+      "height": 768,
+      "sort_order": 2,
+      "source_raw": {
+        "source_id": "img_002",
+        "scraped_at": "2024-01-15T10:30:00Z"
+      }
+    },
+    {
+      "url": "https://example.com/coffee3.jpg",
+      "alt": "Guatemalan Antigua Coffee",
+      "width": 600,
+      "height": 400,
+      "sort_order": 3,
+      "source_raw": {
+        "source_id": "img_003",
+        "scraped_at": "2024-01-15T10:30:00Z"
+      }
+    }
+  ],
+  "duplicate_images": [
+    {
+      "url": "https://example.com/coffee1.jpg",
+      "alt": "Ethiopian Yirgacheffe Coffee (Duplicate)",
+      "width": 800,
+      "height": 600,
+      "sort_order": 1,
+      "source_raw": {
+        "source_id": "img_001_dup",
+        "scraped_at": "2024-01-15T11:00:00Z"
+      }
+    }
+  ],
+  "invalid_images": [
+    {
+      "url": "",
+      "alt": "Invalid URL",
+      "width": 0,
+      "height": 0
+    },
+    {
+      "alt": "Missing URL",
+      "width": 100,
+      "height": 100
+    }
+  ],
+  "batch_test_images": [
+    {
+      "url": "https://example.com/batch1.jpg",
+      "alt": "Batch Image 1",
+      "width": 400,
+      "height": 300,
+      "sort_order": 1
+    },
+    {
+      "url": "https://example.com/batch2.jpg",
+      "alt": "Batch Image 2",
+      "width": 500,
+      "height": 400,
+      "sort_order": 2
+    },
+    {
+      "url": "https://example.com/batch3.jpg",
+      "alt": "Batch Image 3",
+      "width": 600,
+      "height": 500,
+      "sort_order": 3
+    },
+    {
+      "url": "https://example.com/batch4.jpg",
+      "alt": "Batch Image 4",
+      "width": 700,
+      "height": 600,
+      "sort_order": 4
+    },
+    {
+      "url": "https://example.com/batch5.jpg",
+      "alt": "Batch Image 5",
+      "width": 800,
+      "height": 700,
+      "sort_order": 5
+    }
+  ],
+  "performance_test_images": [
+    {
+      "url": "https://example.com/perf1.jpg",
+      "alt": "Performance Test 1",
+      "width": 1920,
+      "height": 1080,
+      "sort_order": 1
+    },
+    {
+      "url": "https://example.com/perf2.jpg",
+      "alt": "Performance Test 2",
+      "width": 1920,
+      "height": 1080,
+      "sort_order": 2
+    },
+    {
+      "url": "https://example.com/perf3.jpg",
+      "alt": "Performance Test 3",
+      "width": 1920,
+      "height": 1080,
+      "sort_order": 3
+    }
+  ],
+  "expected_hashes": {
+    "test_content_hash": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+    "test_header_hash": "ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d"
+  },
+  "test_scenarios": {
+    "single_image": {
+      "description": "Test single image processing",
+      "input": {
+        "url": "https://example.com/single.jpg",
+        "alt": "Single Image Test"
+      },
+      "expected_result": {
+        "is_duplicate": false,
+        "deduplication_status": "new_image"
+      }
+    },
+    "duplicate_image": {
+      "description": "Test duplicate image detection",
+      "input": {
+        "url": "https://example.com/duplicate.jpg",
+        "alt": "Duplicate Image Test"
+      },
+      "expected_result": {
+        "is_duplicate": true,
+        "deduplication_status": "skipped_duplicate"
+      }
+    },
+    "batch_processing": {
+      "description": "Test batch image processing",
+      "input": {
+        "images": [
+          {"url": "https://example.com/batch1.jpg", "alt": "Batch 1"},
+          {"url": "https://example.com/batch2.jpg", "alt": "Batch 2"},
+          {"url": "https://example.com/batch3.jpg", "alt": "Batch 3"}
+        ]
+      },
+      "expected_result": {
+        "total_processed": 3,
+        "successful": 3,
+        "failed": 0
+      }
+    }
+  }
+}

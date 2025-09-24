@@ -53,4 +53,6 @@
 - **CDN**: ImageKit CDN URLs for performance
 - **Fallback**: Remote fetch for problematic image hosts
 - **Storage**: Both source URL and ImageKit URL stored in `coffee_images` table
-
+- **Configuration**: Pydantic-based configuration with validation (see [Configuration Management](14-configuration-management.md))
+- **Service Architecture**: Composed via ValidatorIntegrationService (see [Service Architecture Patterns](13-service-architecture-patterns.md))
+

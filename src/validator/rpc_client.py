@@ -10,6 +10,12 @@ from enum import Enum
 
 from structlog import get_logger
 
+# Import image processing guard
+try:
+    from ..images.processing_guard import ImageProcessingGuard
+except ImportError:
+    ImageProcessingGuard = None
+
 logger = get_logger(__name__)
 
 
@@ -44,7 +50,7 @@ class RPCClient:
     - Support for all coffee pipeline RPC functions
     """
     
-    def __init__(self, supabase_client, max_retries: int = 3, base_delay: float = 1.0):
+    def __init__(self, supabase_client, max_retries: int = 3, base_delay: float = 1.0, metadata_only: bool = False):
         """
         Initialize RPC client.
         
@@ -52,6 +58,7 @@ class RPCClient:
             supabase_client: Supabase client for RPC calls
             max_retries: Maximum number of retry attempts
             base_delay: Base delay in seconds for exponential backoff
+            metadata_only: Whether this is a metadata-only (price-only) run
         """
         self.supabase_client = supabase_client
         self.max_retries = max_retries
@@ -67,6 +74,18 @@ class RPCClient:
             'network_errors': 0,
             'validation_errors': 0
         }
+        
+        # Initialize image processing guard
+        self.metadata_only = metadata_only
+        if ImageProcessingGuard:
+            self.image_guard = ImageProcessingGuard(metadata_only=metadata_only)
+            logger.info(
+                "RPC client image processing guard initialized",
+                metadata_only=metadata_only
+            )
+        else:
+            self.image_guard = None
+            logger.warning("RPC client image processing guard not available")
     
     def _execute_rpc_with_retry(
         self,
@@ -430,17 +449,19 @@ class RPCClient:
             raise RPCError(f"Unexpected result format from rpc_insert_price: {result}")
     
     def upsert_coffee_image(
-        self,
-        coffee_id: str,
-        url: str,
+        self, 
+        coffee_id: str, 
+        url: str, 
         alt: Optional[str] = None,
         width: Optional[int] = None,
         height: Optional[int] = None,
         sort_order: Optional[int] = None,
-        source_raw: Optional[Dict[str, Any]] = None
+        source_raw: Optional[Dict[str, Any]] = None,
+        content_hash: Optional[str] = None,
+        imagekit_url: Optional[str] = None
     ) -> str:
         """
-        Upsert coffee image using rpc_upsert_coffee_image.
+        Upsert coffee image using rpc_upsert_coffee_image with deduplication support.
         
         Args:
             coffee_id: Coffee ID
@@ -450,10 +471,24 @@ class RPCClient:
             height: Image height
             sort_order: Display order
             source_raw: Raw source data
+            content_hash: SHA256 hash for deduplication
+            imagekit_url: ImageKit CDN URL for optimized delivery
             
         Returns:
             Image ID
         """
+        # Check if image processing is allowed (guard enforcement)
+        if self.image_guard and not self.image_guard.check_image_processing_allowed("upsert_coffee_image"):
+            logger.warning(
+                "Image upsert blocked by guard for price-only run",
+                operation="upsert_coffee_image",
+                coffee_id=coffee_id,
+                url=url,
+                metadata_only=self.metadata_only
+            )
+            raise RPCError(
+                f"Image processing blocked for price-only run: upsert_coffee_image for coffee {coffee_id}"
+            )
         parameters = {
             'p_coffee_id': coffee_id,
             'p_url': url
@@ -470,6 +505,10 @@ class RPCClient:
             parameters['p_sort_order'] = sort_order
         if source_raw is not None:
             parameters['p_source_raw'] = source_raw
+        if content_hash is not None:
+            parameters['p_content_hash'] = content_hash
+        if imagekit_url is not None:
+            parameters['p_imagekit_url'] = imagekit_url
         
         result = self._execute_rpc_with_retry(
             rpc_name='rpc_upsert_coffee_image',
@@ -484,6 +523,32 @@ class RPCClient:
             return result
         else:
             raise RPCError(f"Unexpected result format from rpc_upsert_coffee_image: {result}")
+    
+    def check_content_hash(self, content_hash: str) -> Optional[str]:
+        """
+        Check if content hash already exists in database.
+        
+        Args:
+            content_hash: SHA256 hash to check for duplicates
+            
+        Returns:
+            Existing image ID if found, None if new
+        """
+        parameters = {
+            'p_content_hash': content_hash
+        }
+        
+        result = self._execute_rpc_with_retry(
+            rpc_name='rpc_check_content_hash',
+            parameters=parameters,
+            operation_description=f"check content hash {content_hash[:8]}..."
+        )
+        
+        # Return the image ID if found, None if not found
+        if result and result != '':
+            return result
+        else:
+            return None
     
     def get_rpc_stats(self) -> Dict[str, Any]:
         """

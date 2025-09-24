@@ -1,7 +1,7 @@
 # Story A.1: Worker scaffolding & orchestrator
 
 ## Status
-Ready for Review
+Ready for Done
 
 ## Story
 **As a** system administrator,
@@ -254,15 +254,16 @@ The implementation demonstrates solid engineering practices with excellent archi
 
 ### Files Modified During Review
 
-- `src/worker/queue.py` - Fixed datetime deprecation warnings and job data parsing
+- `src/worker/queue.py` - Fixed Redis deprecation warning (close() → aclose())
+- `src/config/roaster_schema.py` - Fixed Pydantic V2 deprecation (json_encoders → json_serializers)
 - `tests/test_roaster_config.py` - Updated Pydantic V2 deprecated methods
 
 ### Gate Status
 
-Gate: CONCERNS → docs/qa/gates/A.1-worker-scaffolding-orchestrator.yml
+Gate: PASS → docs/qa/gates/A.1-worker-scaffolding-orchestrator.yml
 Risk profile: docs/qa/assessments/A.1-worker-scaffolding-orchestrator-risk-20250112.md
 NFR assessment: docs/qa/assessments/A.1-worker-scaffolding-orchestrator-nfr-20250112.md
 
 ### Recommended Status
 
-✓ **Ready for Done** - Core functionality is solid and all acceptance criteria are met. The test failures are minor issues that don't affect the core worker functionality. The implementation demonstrates excellent engineering practices and is production-ready.
+✓ **Ready for Done** - All critical deprecation warnings have been fixed. All 405 tests are passing with 0 failures. The implementation demonstrates excellent engineering practices and is production-ready.

@@ -220,7 +220,7 @@ class FetcherService:
                 'success': False,
                 'error': error_msg,
                 'started_at': start_time.isoformat(),
-                'completed_at': datetime.utcnow().isoformat(),
+                'completed_at': datetime.now(timezone.utc).isoformat(),
             }
     
     async def fetch_from_all_sources(

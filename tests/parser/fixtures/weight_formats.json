@@ -1,0 +1,208 @@
+{
+  "test_cases": [
+    {
+      "category": "metric_units",
+      "description": "Metric unit formats (g, kg, mg)",
+      "test_cases": [
+        {
+          "input": "250g",
+          "expected_grams": 250,
+          "expected_confidence": 0.95,
+          "description": "Simple grams"
+        },
+        {
+          "input": "0.25kg",
+          "expected_grams": 250,
+          "expected_confidence": 0.95,
+          "description": "Kilograms with decimal"
+        },
+        {
+          "input": "1.5kg",
+          "expected_grams": 1500,
+          "expected_confidence": 0.95,
+          "description": "Kilograms with decimal"
+        },
+        {
+          "input": "500mg",
+          "expected_grams": 0,
+          "expected_confidence": 0.95,
+          "description": "Milligrams (rounded to 0)"
+        },
+        {
+          "input": "250 grams",
+          "expected_grams": 250,
+          "expected_confidence": 0.95,
+          "description": "Full word grams"
+        },
+        {
+          "input": "0.5 kilogram",
+          "expected_grams": 500,
+          "expected_confidence": 0.95,
+          "description": "Full word kilogram"
+        }
+      ]
+    },
+    {
+      "category": "imperial_units",
+      "description": "Imperial unit formats (oz, lb)",
+      "test_cases": [
+        {
+          "input": "8.8oz",
+          "expected_grams": 249,
+          "expected_confidence": 0.95,
+          "description": "Ounces with decimal"
+        },
+        {
+          "input": "1lb",
+          "expected_grams": 453,
+          "expected_confidence": 0.95,
+          "description": "Pounds"
+        },
+        {
+          "input": "0.5lb",
+          "expected_grams": 226,
+          "expected_confidence": 0.95,
+          "description": "Fractional pounds"
+        },
+        {
+          "input": "12oz",
+          "expected_grams": 340,
+          "expected_confidence": 0.95,
+          "description": "Ounces"
+        },
+        {
+          "input": "8 1/2 oz",
+          "expected_grams": 240,
+          "expected_confidence": 0.95,
+          "description": "Fractional ounces"
+        },
+        {
+          "input": "1 1/4 lb",
+          "expected_grams": 566,
+          "expected_confidence": 0.95,
+          "description": "Fractional pounds"
+        }
+      ]
+    },
+    {
+      "category": "mixed_formats",
+      "description": "Mixed format with parentheses",
+      "test_cases": [
+        {
+          "input": "250g (8.8oz)",
+          "expected_grams": 250,
+          "expected_confidence": 0.9,
+          "description": "Metric with imperial verification"
+        },
+        {
+          "input": "1kg (2.2lb)",
+          "expected_grams": 1000,
+          "expected_confidence": 0.9,
+          "description": "Kilograms with pounds verification"
+        },
+        {
+          "input": "8.8oz (250g)",
+          "expected_grams": 250,
+          "expected_confidence": 0.9,
+          "description": "Imperial with metric verification"
+        }
+      ]
+    },
+    {
+      "category": "ambiguous_formats",
+      "description": "Ambiguous formats without units",
+      "test_cases": [
+        {
+          "input": "250",
+          "expected_grams": 250,
+          "expected_confidence": 0.7,
+          "description": "Ambiguous - assumed grams (>=1000 heuristic)"
+        },
+        {
+          "input": "8.8",
+          "expected_grams": 8800,
+          "expected_confidence": 0.6,
+          "description": "Ambiguous - assumed kg (1-10 range)"
+        },
+        {
+          "input": "1.5",
+          "expected_grams": 1500,
+          "expected_confidence": 0.6,
+          "description": "Ambiguous - assumed kg (1-10 range)"
+        },
+        {
+          "input": "0.5",
+          "expected_grams": 500,
+          "expected_confidence": 0.6,
+          "description": "Ambiguous - assumed kg (<1 range)"
+        }
+      ]
+    },
+    {
+      "category": "edge_cases",
+      "description": "Edge cases and malformed input",
+      "test_cases": [
+        {
+          "input": "g250",
+          "expected_grams": 0,
+          "expected_confidence": 0.0,
+          "description": "Reversed format"
+        },
+        {
+          "input": "oz8.8",
+          "expected_grams": 0,
+          "expected_confidence": 0.0,
+          "description": "Reversed format"
+        },
+        {
+          "input": " 250g ",
+          "expected_grams": 250,
+          "expected_confidence": 0.95,
+          "description": "Whitespace handling"
+        },
+        {
+          "input": "250g,",
+          "expected_grams": 250,
+          "expected_confidence": 0.95,
+          "description": "Trailing comma"
+        },
+        {
+          "input": "",
+          "expected_grams": 0,
+          "expected_confidence": 0.0,
+          "description": "Empty string"
+        },
+        {
+          "input": "none",
+          "expected_grams": 0,
+          "expected_confidence": 0.0,
+          "description": "Null value"
+        }
+      ]
+    },
+    {
+      "category": "unicode_special",
+      "description": "Unicode and special characters",
+      "test_cases": [
+        {
+          "input": "250g",
+          "expected_grams": 250,
+          "expected_confidence": 0.95,
+          "description": "Unicode grams symbol"
+        },
+        {
+          "input": "8.8oz",
+          "expected_grams": 249,
+          "expected_confidence": 0.95,
+          "description": "Unicode ounces symbol"
+        }
+      ]
+    }
+  ],
+  "performance_requirements": {
+    "min_accuracy": 0.99,
+    "max_parsing_time_ms": 1.0,
+    "batch_processing_target": 1000
+  },
+  "total_test_cases": 40
+}

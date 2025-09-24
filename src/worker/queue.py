@@ -65,7 +65,7 @@ class QueueManager:
     async def close(self):
         """Close Redis connection."""
         if self.redis_client:
-            await self.redis_client.close()
+            await self.redis_client.aclose()
             logger.info("Disconnected from Redis")
     
     async def enqueue_job(self, job_data: Dict[str, Any], priority: int = 0) -> str:

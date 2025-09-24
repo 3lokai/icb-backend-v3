@@ -407,12 +407,23 @@ class DatabaseIntegration:
                     price_id = self.rpc_client.insert_price(**price_payload)
                     results['price_ids'].append(price_id)
             
-            # Upsert images (only if not metadata-only)
+            # Upsert images (only if not metadata-only) - Guard enforcement
             if not metadata_only:
+                logger.info(
+                    "Processing images for full pipeline run",
+                    images_count=len(rpc_payloads['images']),
+                    metadata_only=metadata_only
+                )
                 for image_payload in rpc_payloads['images']:
                     image_payload['p_coffee_id'] = coffee_id
                     image_id = self.rpc_client.upsert_coffee_image(**image_payload)
                     results['image_ids'].append(image_id)
+            else:
+                logger.info(
+                    "Skipping image processing for price-only run",
+                    images_count=len(rpc_payloads['images']),
+                    metadata_only=metadata_only
+                )
             
             logger.info(
                 "Successfully upserted artifact via RPC",

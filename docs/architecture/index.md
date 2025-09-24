@@ -17,3 +17,5 @@
   - [10. Monitoring & Observability](#10-monitoring-observability)
   - [11. Launch Checklist](#11-launch-checklist)
   - [12. Future Considerations](#12-future-considerations)
+  - [13. Service Architecture Patterns](#13-service-architecture-patterns)
+  - [14. Configuration Management](#14-configuration-management)

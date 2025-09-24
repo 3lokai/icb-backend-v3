@@ -219,7 +219,7 @@ class TestArtifactMapper:
         
         # Verify default values are used
         coffee = result['coffee']
-        assert coffee['p_bean_species'] == 'arabica'  # Default
+        assert coffee['p_bean_species'] is None  # None when normalization is missing
         assert coffee['p_name'] == 'Test Coffee'  # From product title
         assert coffee['p_process'] == 'other'  # Default
         assert coffee['p_roast_level'] == 'unknown'  # Default

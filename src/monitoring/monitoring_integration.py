@@ -12,6 +12,9 @@ from typing import Dict, Any, List
 from decimal import Decimal
 
 from .price_job_metrics import PriceJobMetrics, PriceDelta
+from .pipeline_metrics import PipelineMetrics, MetricsCollector
+from .database_metrics import DatabaseMetricsService
+from .grafana_dashboards import GrafanaDashboardConfig
 from .rate_limit_backoff import RateLimitBackoff, RateLimitError, CircuitBreaker
 from .price_alert_service import PriceAlertService
 from .threshold_test_harness import ThresholdTestHarness
@@ -23,6 +26,10 @@ class MonitoringIntegration:
     def __init__(self):
         """Initialize monitoring integration."""
         self.metrics = PriceJobMetrics(prometheus_port=8001)
+        self.pipeline_metrics = PipelineMetrics(prometheus_port=8002)
+        self.metrics_collector = MetricsCollector(self.pipeline_metrics)
+        self.database_metrics = DatabaseMetricsService()
+        self.grafana_config = GrafanaDashboardConfig()
         
         # Initialize alert service with environment variables
         slack_webhook = os.getenv('SLACK_WEBHOOK_URL', '')
@@ -242,6 +249,109 @@ class MonitoringIntegration:
             "memory_usage_recorded": True
         }
     
+    async def test_pipeline_metrics(self) -> Dict[str, Any]:
+        """Test pipeline metrics collection functionality."""
+        print("🧪 Testing pipeline metrics...")
+        
+        # Test pipeline metrics recording
+        self.pipeline_metrics.record_fetch_operation(2.5, "test_source", "shopify", "fetch_products")
+        self.pipeline_metrics.record_artifact_processing("test_source", "valid", "shopify", 10)
+        self.pipeline_metrics.record_database_operation("select", True, "scrape_runs")
+        self.pipeline_metrics.record_price_delta("test_roaster", "USD", "increase", 3)
+        self.pipeline_metrics.record_system_resources("memory", "fetcher", 1024.5)
+        
+        # Test metrics collector
+        timer_id = self.metrics_collector.start_operation_timer("test_operation")
+        await asyncio.sleep(0.1)  # Small delay
+        duration = self.metrics_collector.end_operation_timer(timer_id, "test_source", "shopify", "fetch_products")
+        
+        # Test comprehensive metrics recording
+        self.metrics_collector.record_fetch_success("test_source", "shopify", 15, 3.0)
+        self.metrics_collector.record_validation_result("test_source", "shopify", "test_roaster", True)
+        self.metrics_collector.record_price_changes("test_roaster", "USD", [
+            {"change_type": "increase", "count": 2},
+            {"change_type": "decrease", "count": 1}
+        ])
+        
+        # Get pipeline metrics summary
+        summary = self.pipeline_metrics.get_pipeline_metrics_summary()
+        
+        print(f"✅ Pipeline metrics test passed")
+        print(f"   Prometheus port: {summary['prometheus_port']}")
+        print(f"   Pipeline metrics: {len(summary['pipeline_metrics'])}")
+        print(f"   Operation duration: {duration:.2f}s")
+        
+        return {
+            "status": "PASS",
+            "pipeline_metrics_recorded": 5,
+            "operation_duration": duration,
+            "prometheus_port": summary['prometheus_port']
+        }
+    
+    async def test_database_metrics(self) -> Dict[str, Any]:
+        """Test database metrics collection functionality."""
+        print("🧪 Testing database metrics...")
+        
+        # Test database metrics collection
+        scrape_run_metrics = await self.database_metrics.collect_scrape_run_metrics()
+        artifact_metrics = await self.database_metrics.collect_artifact_metrics()
+        price_metrics = await self.database_metrics.collect_price_metrics()
+        variant_metrics = await self.database_metrics.collect_variant_metrics()
+        
+        # Test comprehensive metrics collection
+        comprehensive_metrics = await self.database_metrics.collect_comprehensive_metrics()
+        
+        print(f"✅ Database metrics test passed")
+        print(f"   Scrape runs: {scrape_run_metrics['total_runs']}")
+        print(f"   Artifacts: {artifact_metrics['total_artifacts']}")
+        print(f"   Prices: {price_metrics['total_prices']}")
+        print(f"   Variants: {variant_metrics['total_variants']}")
+        print(f"   Health score: {comprehensive_metrics['overall_health_score']}")
+        
+        return {
+            "status": "PASS",
+            "scrape_runs": scrape_run_metrics['total_runs'],
+            "artifacts": artifact_metrics['total_artifacts'],
+            "prices": price_metrics['total_prices'],
+            "variants": variant_metrics['total_variants'],
+            "health_score": comprehensive_metrics['overall_health_score']
+        }
+    
+    async def test_grafana_dashboards(self) -> Dict[str, Any]:
+        """Test Grafana dashboard configuration functionality."""
+        print("🧪 Testing Grafana dashboards...")
+        
+        # Test dashboard creation
+        pipeline_dashboard = self.grafana_config.create_pipeline_overview_dashboard()
+        roaster_dashboard = self.grafana_config.create_roaster_specific_dashboard("test_roaster")
+        price_dashboard = self.grafana_config.create_price_monitoring_dashboard()
+        database_dashboard = self.grafana_config.create_database_health_dashboard()
+        
+        # Test alerting rules
+        alerting_rules = self.grafana_config.create_alerting_rules()
+        
+        # Test dashboard export
+        all_dashboards = self.grafana_config.get_all_dashboards()
+        pipeline_config = self.grafana_config.export_dashboard_config("pipeline_overview")
+        
+        print(f"✅ Grafana dashboards test passed")
+        print(f"   Pipeline dashboard panels: {len(pipeline_dashboard['dashboard']['panels'])}")
+        print(f"   Roaster dashboard panels: {len(roaster_dashboard['dashboard']['panels'])}")
+        print(f"   Price dashboard panels: {len(price_dashboard['dashboard']['panels'])}")
+        print(f"   Database dashboard panels: {len(database_dashboard['dashboard']['panels'])}")
+        print(f"   Alerting rules: {len(alerting_rules)}")
+        print(f"   Total dashboards: {len(all_dashboards)}")
+        
+        return {
+            "status": "PASS",
+            "pipeline_panels": len(pipeline_dashboard['dashboard']['panels']),
+            "roaster_panels": len(roaster_dashboard['dashboard']['panels']),
+            "price_panels": len(price_dashboard['dashboard']['panels']),
+            "database_panels": len(database_dashboard['dashboard']['panels']),
+            "alerting_rules": len(alerting_rules),
+            "total_dashboards": len(all_dashboards)
+        }
+    
     async def run_comprehensive_test(self) -> Dict[str, Any]:
         """Run comprehensive monitoring integration test."""
         print("🚀 Starting B.3 Monitoring Integration Test")
@@ -257,6 +367,9 @@ class MonitoringIntegration:
             ("Price Spike Detection", self.test_price_spike_detection),
             ("Alert Throttling", self.test_alert_throttling),
             ("Performance Monitoring", self.test_performance_monitoring),
+            ("Pipeline Metrics", self.test_pipeline_metrics),
+            ("Database Metrics", self.test_database_metrics),
+            ("Grafana Dashboards", self.test_grafana_dashboards),
         ]
         
         passed = 0

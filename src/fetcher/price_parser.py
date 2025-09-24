@@ -8,6 +8,14 @@ from decimal import Decimal
 from datetime import datetime, timezone
 from structlog import get_logger
 
+# Import weight parser for enhanced weight parsing
+try:
+    from ..parser.weight_parser import WeightParser, WeightResult
+except ImportError:
+    # Fallback for when weight parser is not available
+    WeightParser = None
+    WeightResult = None
+
 logger = get_logger(__name__)
 
 
@@ -70,10 +78,14 @@ class PriceParser:
         self.job_type = job_type
         self.price_fields = ["price", "availability", "sku", "weight"]
         
+        # Initialize weight parser for enhanced weight parsing
+        self.weight_parser = WeightParser() if WeightParser else None
+        
         logger.info(
             "Initialized price parser",
             job_type=job_type,
             price_fields=self.price_fields,
+            weight_parser_available=bool(self.weight_parser),
         )
     
     def extract_price_data(self, product: Dict[str, Any]) -> Dict[str, Any]:
@@ -277,20 +289,45 @@ class PriceParser:
         return True
     
     def _extract_weight(self, variant: Dict[str, Any]) -> Optional[float]:
-        """Extract weight in grams."""
+        """Extract weight in grams using enhanced weight parser."""
         try:
             weight = variant.get('weight')
             if weight is None:
                 return None
             
-            # Convert to float
-            weight_float = float(weight)
+            # Use enhanced weight parser if available
+            if self.weight_parser:
+                weight_result = self.weight_parser.parse_weight(weight)
+                if weight_result.grams > 0:
+                    # Log parsing warnings if any
+                    if weight_result.parsing_warnings:
+                        logger.warning(
+                            "Weight parsing warnings",
+                            variant_id=variant.get('id'),
+                            warnings=weight_result.parsing_warnings,
+                            original_format=weight_result.original_format
+                        )
+                    return float(weight_result.grams)
+                else:
+                    logger.warning(
+                        "Weight parsing failed",
+                        variant_id=variant.get('id'),
+                        weight_input=weight,
+                        warnings=weight_result.parsing_warnings
+                    )
+                    return None
+            else:
+                # Fallback to simple conversion
+                weight_float = float(weight)
+                return weight_float
             
-            # Assume grams if no unit specified
-            # This could be enhanced to detect units
-            return weight_float
-            
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as e:
+            logger.warning(
+                "Weight extraction failed",
+                variant_id=variant.get('id'),
+                weight=weight,
+                error=str(e)
+            )
             return None
     
     def detect_price_deltas(
