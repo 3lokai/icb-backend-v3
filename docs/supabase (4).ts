@@ -175,8 +175,10 @@ export type Database = {
         Row: {
           alt: string | null
           coffee_id: string
+          content_hash: string | null
           height: number | null
           id: string
+          imagekit_url: string | null
           sort_order: number
           source_raw: Json
           url: string
@@ -185,8 +187,10 @@ export type Database = {
         Insert: {
           alt?: string | null
           coffee_id: string
+          content_hash?: string | null
           height?: number | null
           id?: string
+          imagekit_url?: string | null
           sort_order?: number
           source_raw?: Json
           url: string
@@ -195,8 +199,10 @@ export type Database = {
         Update: {
           alt?: string | null
           coffee_id?: string
+          content_hash?: string | null
           height?: number | null
           id?: string
+          imagekit_url?: string | null
           sort_order?: number
           source_raw?: Json
           url?: string
@@ -988,30 +994,32 @@ export type Database = {
         Args: { "": string }
         Returns: string
       }
+      get_epic_c_parameters: {
+        Args: { p_coffee_id: string }
+        Returns: Json
+      }
       map_roast_legacy: {
         Args: { raw: string }
         Returns: Database["public"]["Enums"]["roast_level_enum"]
       }
+      rpc_check_content_hash: {
+        Args: { p_content_hash: string }
+        Returns: string
+      }
+      rpc_check_duplicate_image_hash: {
+        Args: { p_content_hash: string }
+        Returns: string
+      }
       rpc_insert_price: {
-        Args:
-          | {
-              p_currency?: string
-              p_is_sale?: boolean
-              p_price: number
-              p_scraped_at?: string
-              p_source_raw?: Json
-              p_source_url?: string
-              p_variant_id: string
-            }
-          | {
-              p_currency?: string
-              p_is_sale?: boolean
-              p_price: number
-              p_scraped_at?: string
-              p_source_raw?: Json
-              p_source_url?: string
-              p_variant_id: string
-            }
+        Args: {
+          p_currency?: string
+          p_is_sale?: boolean
+          p_price: number
+          p_scraped_at?: string
+          p_source_raw?: Json
+          p_source_url?: string
+          p_variant_id: string
+        }
         Returns: string
       }
       rpc_record_artifact: {
@@ -1039,15 +1047,25 @@ export type Database = {
       }
       rpc_upsert_coffee: {
         Args: {
+          p_acidity?: number
+          p_altitude?: number
           p_bean_species: Database["public"]["Enums"]["species_enum"]
+          p_body?: number
+          p_content_hash?: string
+          p_country?: string
           p_decaf?: boolean
+          p_default_grind?: Database["public"]["Enums"]["grind_enum"]
+          p_description_cleaned?: string
           p_description_md: string
           p_direct_buy_url: string
+          p_flavors?: string[]
           p_name: string
           p_notes_raw?: Json
           p_platform_product_id: string
           p_process: Database["public"]["Enums"]["process_enum"]
           p_process_raw: string
+          p_raw_hash?: string
+          p_region?: string
           p_roast_level: Database["public"]["Enums"]["roast_level_enum"]
           p_roast_level_raw: string
           p_roast_style_raw: string
@@ -1055,6 +1073,9 @@ export type Database = {
           p_slug: string
           p_source_raw?: Json
           p_status?: Database["public"]["Enums"]["coffee_status_enum"]
+          p_tags?: string[]
+          p_title_cleaned?: string
+          p_varieties?: string[]
         }
         Returns: string
       }
@@ -1066,7 +1087,9 @@ export type Database = {
         Args: {
           p_alt?: string
           p_coffee_id: string
+          p_content_hash?: string
           p_height?: number
+          p_imagekit_url?: string
           p_sort_order?: number
           p_source_raw?: Json
           p_url: string

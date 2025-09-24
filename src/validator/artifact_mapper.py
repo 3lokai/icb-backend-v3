@@ -94,14 +94,22 @@ class ArtifactMapper:
         self.roast_parser = RoastLevelParser() if RoastLevelParser else None
         self.process_parser = ProcessMethodParser() if ProcessMethodParser else None
         
-        # Initialize image services from integration service or individual parameters
+        # Initialize parser services from integration service
         if integration_service:
+            # Store individual parser services for direct access
+            self.tag_normalization_service = integration_service.tag_normalization_service
+            self.notes_extraction_service = integration_service.notes_extraction_service
+            
             # Use services from integration service
             self.deduplication_service = integration_service.image_deduplication_service
             self.imagekit_integration = integration_service.imagekit_integration
             self.enable_image_deduplication = integration_service.config.enable_image_deduplication
             self.enable_imagekit = integration_service.config.enable_imagekit_upload
         else:
+            # Initialize parser services as None when no integration service
+            self.tag_normalization_service = None
+            self.notes_extraction_service = None
+            
             # Initialize image deduplication service
             self.enable_image_deduplication = enable_image_deduplication
             self.deduplication_service = None
@@ -264,6 +272,23 @@ class ArtifactMapper:
         # Map raw data
         coffee_payload['p_source_raw'] = self._build_source_raw(artifact)
         coffee_payload['p_notes_raw'] = self._build_notes_raw(normalization)
+        
+        # Map tags using tag normalization service
+        if self.integration_service and self.integration_service.tag_normalization_service:
+            tags = self._extract_and_normalize_tags(product)
+            if tags:
+                coffee_payload['p_tags'] = tags
+        
+        # Map notes using notes extraction service
+        if self.notes_extraction_service:
+            notes = self._extract_notes_from_description(product)
+            if notes:
+                # Add notes to existing notes_raw or create new structure
+                existing_notes = coffee_payload.get('p_notes_raw', {})
+                if not isinstance(existing_notes, dict):
+                    existing_notes = {}
+                existing_notes['extracted_notes'] = notes
+                coffee_payload['p_notes_raw'] = existing_notes
         
         self.mapping_stats['coffee_mapped'] += 1
         
@@ -860,4 +885,117 @@ class ArtifactMapper:
             'images_mapped': 0,
             'mapping_errors': 0
         }
+    
+    def _extract_and_normalize_tags(self, product) -> Optional[List[str]]:
+        """
+        Extract and normalize tags from product data.
+        
+        Args:
+            product: Product model
+            
+        Returns:
+            List of normalized tags or None if no tags found
+        """
+        try:
+            if not self.tag_normalization_service:
+                return None
+            
+            # Extract tags from product data
+            raw_tags = []
+            
+            # Get tags from product title and description
+            if product.title:
+                # Split title into potential tags
+                title_words = product.title.lower().split()
+                raw_tags.extend(title_words)
+            
+            if product.description_html:
+                # Extract potential tags from description
+                description_text = self._html_to_markdown(product.description_html)
+                description_words = description_text.lower().split()
+                raw_tags.extend(description_words)
+            
+            if product.description_md:
+                # Extract potential tags from markdown description
+                md_words = product.description_md.lower().split()
+                raw_tags.extend(md_words)
+            
+            # Remove duplicates and filter
+            raw_tags = list(set([tag.strip() for tag in raw_tags if len(tag.strip()) > 2]))
+            
+            if not raw_tags:
+                return None
+            
+            # Normalize tags using the service
+            result = self.tag_normalization_service.normalize_tags(raw_tags)
+            
+            # Return normalized tags as a flat list
+            normalized_tags = []
+            for category, tags in result.normalized_tags.items():
+                normalized_tags.extend(tags)
+            
+            logger.info(
+                "Tag normalization completed",
+                product_id=product.platform_product_id,
+                raw_tags_count=len(raw_tags),
+                normalized_tags_count=len(normalized_tags),
+                categories=len(result.normalized_tags)
+            )
+            
+            return normalized_tags if normalized_tags else None
+            
+        except Exception as e:
+            logger.warning(
+                "Tag normalization failed",
+                product_id=product.platform_product_id,
+                error=str(e)
+            )
+            return None
+    
+    def _extract_notes_from_description(self, product) -> Optional[List[str]]:
+        """
+        Extract tasting notes from product description.
+        
+        Args:
+            product: Product model
+            
+        Returns:
+            List of extracted notes or None if no notes found
+        """
+        try:
+            if not self.notes_extraction_service:
+                return None
+            
+            # Combine all description sources
+            description_text = ""
+            
+            if product.description_html:
+                description_text += self._html_to_markdown(product.description_html)
+            
+            if product.description_md:
+                description_text += " " + product.description_md
+            
+            if not description_text.strip():
+                return None
+            
+            # Extract notes using the service
+            result = self.notes_extraction_service.extract_notes(description_text)
+            
+            logger.info(
+                "Notes extraction completed",
+                product_id=product.platform_product_id,
+                description_length=len(description_text),
+                notes_count=len(result.notes_raw),
+                extraction_success=result.extraction_success
+            )
+            
+            return result.notes_raw if result.notes_raw else None
+            
+        except Exception as e:
+            logger.warning(
+                "Notes extraction failed",
+                product_id=product.platform_product_id,
+                error=str(e)
+            )
+            return None
     

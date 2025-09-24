@@ -34,12 +34,11 @@
         "platform_product_id": { "type": "string" },
         "platform": { "type": "string", "enum": ["shopify","woocommerce","other"] },
         "title": { "type": "string" },
-        "handle": { "type": "string" },
         "slug": { "type": "string" },
         "description_html": { "type": "string" },
         "description_md": { "type": "string" },
         "source_url": { "type": "string", "format": "uri" },
-        "product_type": { "type": "string" },
+        "is_coffee": { "type": "boolean" },
         "tags": { "type": "array", "items": { "type": "string" } },
         "images": {
           "type": "array",
@@ -165,12 +164,11 @@
     "platform_product_id": "987654321",
     "platform": "shopify",
     "title": "Blue Tokai Single Origin - 250g",
-    "handle": "single-origin-250g",
     "slug": "blue-tokai-single-origin-250g",
     "description_html": "<p>Our single origin coffee... <strong>Tasting Notes:</strong> chocolate, orange, caramel.</p>",
     "description_md": "Our single origin coffee... **Tasting Notes:** chocolate, orange, caramel.",
     "source_url": "https://bluetokaicoffee.com/products/single-origin-250g",
-    "product_type": "coffee",
+    "is_coffee": true,
     "tags": ["single-origin","espresso","roasted","blue-tokai"],
     "images": [
       { "url": "https://cdn.bluetokai.com/images/so-250-front.jpg", "alt_text": "Blue Tokai 250g front", "order": 0, "source_id": "img-1" },
@@ -259,7 +257,7 @@ Use this as a quick reference for your scraper → RPC wiring.
 | `product.title` → normalization.name\_clean                     |                                         `coffees.name` | `name`                                                     |
 | `product.slug`                                                  |                                         `coffees.slug` | `slug`                                                     |
 | `product.description_md` / `normalization.description_md_clean` |                               `coffees.description_md` | `description_md`                                           |
-| `product.product_type`                                          |                                 `coffees.product_type` | `product_type`                                             |
+| `product.is_coffee`                                             |                                    `coffees.is_coffee` | `is_coffee` (boolean - true for coffee, false for equipment) |
 | `normalization.is_coffee`                                       |                                    `coffees.is_coffee` | `is_coffee` (NEW FIELD - add to migration)                |
 | `product.tags` / `normalization.tags_normalized`                |                                         `coffees.tags` | `tags` (NEW FIELD - add to migration)                     |
 | `normalization.notes_raw`                                       |                                    `coffees.notes_raw` | `notes_raw` (EXISTING FIELD)                              |
@@ -313,7 +311,7 @@ To minimize database changes, we repurpose existing fields for scraping data:
 - **`scrape_artifacts` table** → Already exists for raw data storage  
 - **`product_sources` table** → Already exists for source configuration
 
-This approach reduces new columns from 18 to just 2 (`tags` and `varieties`) while leveraging your existing infrastructure and normalized tables for geographic data.
+This approach reduces new columns from 18 to just 2 (`tags` and `varieties`) while leveraging your existing infrastructure and normalized tables for geographic data. The `is_coffee` boolean field provides a cleaner approach than separate product type categorization.
 
 ## Important Processing Notes
 

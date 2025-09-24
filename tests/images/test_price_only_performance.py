@@ -16,7 +16,7 @@ from src.images.processing_guard import ImageProcessingGuard
 from src.validator.artifact_mapper import ArtifactMapper
 from src.validator.database_integration import DatabaseIntegration
 from src.validator.rpc_client import RPCClient
-from src.validator.models import ArtifactModel, ProductModel, VariantModel, PriceModel, ImageModel
+from src.validator.models import ArtifactModel, ProductModel, VariantModel, ImageModel, SourceEnum
 
 
 class TestPriceOnlyPerformance:
@@ -43,39 +43,32 @@ class TestPriceOnlyPerformance:
                 source_id=f"test_source_{i}"
             ))
         
-        # Create mock product with images
-        product = ProductModel(
-            platform_product_id="test_product_123",
-            name="Test Coffee",
-            description="Test coffee description",
-            images=images
-        )
-        
-        # Create mock variant
+        # Create mock variant first
         variant = VariantModel(
             platform_variant_id="test_variant_123",
-            platform_product_id="test_product_123",
-            name="Test Variant",
-            weight="250g",
-            price=25.99,
-            currency="USD"
+            title="Test Variant",
+            price="25.99",
+            currency="USD",
+            grams=250,
+            weight_unit="g"
         )
         
-        # Create mock price
-        price = PriceModel(
-            platform_variant_id="test_variant_123",
-            price=25.99,
-            currency="USD"
+        # Create mock product with images and variants
+        product = ProductModel(
+            platform_product_id="test_product_123",
+            title="Test Coffee",
+            source_url="https://example.com/product",
+            images=images,
+            variants=[variant]
         )
+        
         
         # Create artifact
         artifact = ArtifactModel(
-            platform="test_platform",
-            platform_product_id="test_product_123",
+            source=SourceEnum.SHOPIFY,
+            roaster_domain="test.example.com",
             scraped_at="2025-01-12T10:00:00Z",
-            product=product,
-            variants=[variant],
-            prices=[price]
+            product=product
         )
         
         return artifact

@@ -76,10 +76,11 @@ class ImageProcessingGuard:
         """
         if not self.check_image_processing_allowed(operation):
             self.guard_stats['operations_skipped'] += 1
+            function_name = getattr(func, '__name__', 'unknown_function')
             self.logger.info(
                 "Skipping image processing for price-only run",
                 operation=operation,
-                function_name=func.__name__,
+                function_name=function_name,
                 guard_stats=self.guard_stats
             )
             return None
@@ -90,10 +91,11 @@ class ImageProcessingGuard:
             return result
         except Exception as e:
             self.guard_stats['blocks_failed'] += 1
+            function_name = getattr(func, '__name__', 'unknown_function')
             self.logger.error(
                 "Image processing operation failed",
                 operation=operation,
-                function_name=func.__name__,
+                function_name=function_name,
                 error=str(e),
                 guard_stats=self.guard_stats
             )

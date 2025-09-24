@@ -24,6 +24,8 @@ from ..images.imagekit_integration import ImageKitIntegrationService
 from ..parser.weight_parser import WeightParser
 from ..parser.roast_parser import RoastLevelParser
 from ..parser.process_parser import ProcessMethodParser
+from ..parser.tag_normalization import TagNormalizationService
+from ..parser.notes_extraction import NotesExtractionService
 
 logger = get_logger(__name__)
 
@@ -103,6 +105,18 @@ class ValidatorIntegrationService:
             self.process_parser = ProcessMethodParser()
         else:
             self.process_parser = None
+        
+        # Initialize tag normalization service
+        if self.config.enable_tag_normalization:
+            self.tag_normalization_service = TagNormalizationService()
+        else:
+            self.tag_normalization_service = None
+        
+        # Initialize notes extraction service
+        if self.config.enable_notes_extraction:
+            self.notes_extraction_service = NotesExtractionService()
+        else:
+            self.notes_extraction_service = None
         
         # Initialize artifact mapper after image services
         self.artifact_mapper = ArtifactMapper(integration_service=self)

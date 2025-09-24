@@ -1,333 +1,439 @@
 # Database Tables
 
-This document describes all tables in the database schema.
+This document describes all tables in the database schema with their columns, relationships, and usage.
 
 ## Core Tables
 
-### brew_methods
-Brewing methods available for coffee preparation.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| key | string | Unique identifier for the brew method |
-| label | string | Human-readable name |
-
 ### coffees
-Main coffee products table.
+Main table storing coffee product information.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| name | string | Coffee name |
-| slug | string | URL-friendly identifier |
-| roaster_id | string | Foreign key to roasters table |
-| bean_species | species_enum | Coffee species (arabica, robusta, liberica, blend) |
-| process | process_enum | Processing method (washed, natural, honey, etc.) |
-| process_raw | string | Original process description |
-| roast_level | roast_level_enum | Roast level (light, medium, dark, etc.) |
-| roast_level_raw | string | Original roast level description |
-| roast_style_raw | string | Additional roast style information |
-| decaf | boolean | Whether coffee is decaffeinated |
-| is_limited | boolean | Whether coffee is limited edition |
-| is_coffee | boolean | Whether this is actually coffee (vs other products) |
-| crop_year | number | Year of coffee harvest |
-| harvest_window | string | Harvest period description |
-| description_md | string | Markdown description |
-| notes_lang | string | Language of notes |
-| notes_raw | Json | Raw notes data |
-| direct_buy_url | string | Direct purchase URL |
-| platform_product_id | string | Platform-specific product ID |
-| vendor_sku | string | Vendor SKU |
-| rating_avg | number | Average rating |
-| rating_count | number | Number of ratings |
-| status | coffee_status_enum | Coffee status (active, seasonal, discontinued, etc.) |
-| seo_title | string | SEO title |
-| seo_desc | string | SEO description |
-| source_raw | Json | Raw source data |
-| tags | string[] | Array of tags |
-| varieties | string[] | Array of coffee varieties |
-| first_seen_at | string | First time this coffee was seen |
-| created_at | string | Creation timestamp |
-| updated_at | string | Last update timestamp |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| name | string | No | Coffee name |
+| slug | string | No | URL-friendly identifier |
+| roaster_id | string | No | Foreign key to roasters table |
+| description_md | string | Yes | Markdown description |
+| direct_buy_url | string | Yes | Direct purchase URL |
+| platform_product_id | string | Yes | Platform-specific product ID |
+| vendor_sku | string | Yes | Vendor SKU |
+| status | coffee_status_enum | No | Coffee status |
+| is_coffee | boolean | Yes | Whether this is actually coffee |
+| is_limited | boolean | No | Whether this is a limited edition |
+| decaf | boolean | No | Whether this is decaffeinated |
+| crop_year | number | Yes | Harvest year |
+| harvest_window | string | Yes | Harvest time window |
+| first_seen_at | string | Yes | When first discovered |
+| created_at | string | No | Creation timestamp |
+| updated_at | string | No | Last update timestamp |
+| seo_title | string | Yes | SEO title |
+| seo_desc | string | Yes | SEO description |
+| notes_lang | string | Yes | Language of notes |
+| notes_raw | Json | Yes | Raw notes data |
+| source_raw | Json | Yes | Raw source data |
+| roast_level | roast_level_enum | Yes | Roast level |
+| roast_level_raw | string | Yes | Raw roast level text |
+| roast_style_raw | string | Yes | Raw roast style text |
+| process | process_enum | Yes | Processing method |
+| process_raw | string | Yes | Raw process text |
+| bean_species | species_enum | Yes | Coffee species |
+| varieties | string[] | Yes | Coffee varieties |
+| tags | string[] | Yes | Product tags |
+| default_grind | grind_enum | Yes | Default grind recommendation |
+| region | string | Yes | Coffee region |
+| country | string | Yes | Coffee country |
+| altitude | number | Yes | Altitude in meters |
+| acidity | number | Yes | Acidity rating (1-10) |
+| body | number | Yes | Body rating (1-10) |
+| flavors | string[] | Yes | Flavor notes |
+| content_hash | string | Yes | Content hash for deduplication |
+| raw_hash | string | Yes | Raw content hash |
+| title_cleaned | string | Yes | Cleaned title |
+| description_cleaned | string | Yes | Cleaned description |
+| rating_avg | number | Yes | Average rating |
+| rating_count | number | No | Number of ratings |
+
+**Relationships:**
+- `roaster_id` → `roasters.id`
 
 ### roasters
-Coffee roasters and companies.
+Table storing roaster information.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| name | string | Roaster name |
-| slug | string | URL-friendly identifier |
-| platform | platform_enum | Platform type (shopify, woocommerce, custom, other) |
-| is_active | boolean | Whether roaster is active |
-| website | string | Roaster website URL |
-| support_email | string | Support email |
-| phone | string | Phone number |
-| instagram_handle | string | Instagram handle |
-| social_json | Json | Social media data |
-| hq_country | string | Headquarters country |
-| hq_state | string | Headquarters state |
-| hq_city | string | Headquarters city |
-| lat | number | Latitude coordinate |
-| lon | number | Longitude coordinate |
-| alert_price_delta_pct | number | Price change alert threshold percentage |
-| default_concurrency | number | Default scraping concurrency |
-| firecrawl_budget_limit | number | Firecrawl budget limit |
-| full_cadence | string | Full scraping cadence |
-| price_cadence | string | Price scraping cadence |
-| robots_allow | boolean | Whether robots.txt allows scraping |
-| robots_checked_at | string | Last robots.txt check timestamp |
-| use_firecrawl_fallback | boolean | Whether to use Firecrawl fallback |
-| use_llm | boolean | Whether to use LLM processing |
-| last_etag | string | Last ETag for caching |
-| last_modified | string | Last modification timestamp |
-| created_at | string | Creation timestamp |
-| updated_at | string | Last update timestamp |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| name | string | No | Roaster name |
+| slug | string | No | URL-friendly identifier |
+| website | string | Yes | Roaster website |
+| platform | platform_enum | Yes | E-commerce platform |
+| is_active | boolean | No | Whether roaster is active |
+| hq_city | string | Yes | Headquarters city |
+| hq_state | string | Yes | Headquarters state |
+| hq_country | string | Yes | Headquarters country |
+| lat | number | Yes | Latitude |
+| lon | number | Yes | Longitude |
+| phone | string | Yes | Contact phone |
+| support_email | string | Yes | Support email |
+| instagram_handle | string | Yes | Instagram handle |
+| social_json | Json | Yes | Social media data |
+| created_at | string | No | Creation timestamp |
+| updated_at | string | No | Last update timestamp |
+| last_modified | string | Yes | Last modification timestamp |
+| last_etag | string | Yes | Last ETag |
+| robots_allow | boolean | Yes | Robots.txt allows scraping |
+| robots_checked_at | string | Yes | When robots.txt was checked |
+| use_llm | boolean | Yes | Whether to use LLM processing |
+| use_firecrawl_fallback | boolean | Yes | Whether to use Firecrawl fallback |
+| firecrawl_budget_limit | number | Yes | Firecrawl budget limit |
+| default_concurrency | number | Yes | Default concurrency setting |
+| full_cadence | string | Yes | Full scraping cadence |
+| price_cadence | string | Yes | Price scraping cadence |
+| alert_price_delta_pct | number | Yes | Price change alert threshold |
 
 ### variants
-Coffee product variants (different sizes, grinds, etc.).
+Table storing coffee variant information (different sizes, grinds, etc.).
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| coffee_id | string | Foreign key to coffees table |
-| grind | grind_enum | Grind type (whole, filter, espresso, etc.) |
-| weight_g | number | Weight in grams |
-| pack_count | number | Number of packs |
-| currency | string | Currency code |
-| in_stock | boolean | Whether variant is in stock |
-| stock_qty | number | Stock quantity |
-| subscription_available | boolean | Whether subscription is available |
-| platform_variant_id | string | Platform-specific variant ID |
-| sku | string | SKU |
-| barcode | string | Barcode |
-| compare_at_price | number | Compare at price |
-| price_current | number | Current price |
-| price_last_checked_at | string | Last price check timestamp |
-| status | string | Variant status |
-| last_seen_at | string | Last time variant was seen |
-| source_raw | Json | Raw source data |
-| created_at | string | Creation timestamp |
-| updated_at | string | Last update timestamp |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| coffee_id | string | No | Foreign key to coffees table |
+| platform_variant_id | string | Yes | Platform-specific variant ID |
+| sku | string | Yes | SKU |
+| barcode | string | Yes | Barcode |
+| weight_g | number | No | Weight in grams |
+| grind | grind_enum | No | Grind type |
+| pack_count | number | No | Number of packs |
+| currency | string | No | Currency code |
+| price_current | number | Yes | Current price |
+| compare_at_price | number | Yes | Compare at price |
+| in_stock | boolean | No | Whether in stock |
+| stock_qty | number | Yes | Stock quantity |
+| subscription_available | boolean | No | Whether subscription available |
+| status | string | Yes | Variant status |
+| source_raw | Json | Yes | Raw source data |
+| created_at | string | No | Creation timestamp |
+| updated_at | string | No | Last update timestamp |
+| last_seen_at | string | Yes | When last seen |
+| price_last_checked_at | string | Yes | When price was last checked |
+
+**Relationships:**
+- `coffee_id` → `coffees.id`
 
 ### prices
-Price history for coffee variants.
+Table storing price history for variants.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| variant_id | string | Foreign key to variants table |
-| price | number | Price value |
-| currency | string | Currency code |
-| is_sale | boolean | Whether price is a sale price |
-| source_url | string | Source URL |
-| source_raw | Json | Raw source data |
-| scraped_at | string | Scraping timestamp |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| variant_id | string | No | Foreign key to variants table |
+| price | number | No | Price value |
+| currency | string | No | Currency code |
+| is_sale | boolean | No | Whether this is a sale price |
+| scraped_at | string | No | When price was scraped |
+| source_url | string | Yes | Source URL |
+| source_raw | Json | Yes | Raw source data |
 
-## Junction Tables
+**Relationships:**
+- `variant_id` → `variants.id`
 
-### coffee_brew_methods
-Links coffees to brew methods.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| coffee_id | string | Foreign key to coffees table |
-| brew_method_id | string | Foreign key to brew_methods table |
-
-### coffee_estates
-Links coffees to estates with percentage.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| coffee_id | string | Foreign key to coffees table |
-| estate_id | string | Foreign key to estates table |
-| pct | number | Percentage of coffee from this estate |
-
-### coffee_flavor_notes
-Links coffees to flavor notes.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| coffee_id | string | Foreign key to coffees table |
-| flavor_note_id | string | Foreign key to flavor_notes table |
-
-### coffee_regions
-Links coffees to regions with percentage.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| coffee_id | string | Foreign key to coffees table |
-| region_id | string | Foreign key to regions table |
-| pct | number | Percentage of coffee from this region |
-
-## Supporting Tables
-
-### estates
-Coffee estates and farms.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| name | string | Estate name |
-| region_id | string | Foreign key to regions table |
-| altitude_min_m | number | Minimum altitude in meters |
-| altitude_max_m | number | Maximum altitude in meters |
-| notes | string | Additional notes |
+## Geographic Tables
 
 ### regions
-Geographic regions.
+Table storing geographic region information.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| display_name | string | Display name for the region |
-| country | string | Country name |
-| state | string | State/province name |
-| subregion | string | Subregion name |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| display_name | string | No | Display name |
+| country | string | No | Country |
+| state | string | Yes | State/Province |
+| subregion | string | Yes | Subregion |
 
-### flavor_notes
-Coffee flavor notes and descriptors.
+### estates
+Table storing coffee estate information.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| key | string | Unique identifier |
-| label | string | Human-readable name |
-| group_key | string | Grouping key for related notes |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| name | string | No | Estate name |
+| region_id | string | Yes | Foreign key to regions table |
+| altitude_min_m | number | Yes | Minimum altitude in meters |
+| altitude_max_m | number | Yes | Maximum altitude in meters |
+| notes | string | Yes | Estate notes |
 
-### coffee_images
-Images associated with coffees.
+**Relationships:**
+- `region_id` → `regions.id`
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| coffee_id | string | Foreign key to coffees table |
-| url | string | Image URL |
-| alt | string | Alt text |
-| width | number | Image width |
-| height | number | Image height |
-| sort_order | number | Display order |
-| source_raw | Json | Raw source data |
+### coffee_regions
+Junction table linking coffees to regions.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| coffee_id | string | No | Foreign key to coffees table |
+| region_id | string | No | Foreign key to regions table |
+| pct | number | Yes | Percentage of coffee from this region |
+
+**Relationships:**
+- `coffee_id` → `coffees.id`
+- `region_id` → `regions.id`
+
+### coffee_estates
+Junction table linking coffees to estates.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| coffee_id | string | No | Foreign key to coffees table |
+| estate_id | string | No | Foreign key to estates table |
+| pct | number | Yes | Percentage of coffee from this estate |
+
+**Relationships:**
+- `coffee_id` → `coffees.id`
+- `estate_id` → `estates.id`
+
+## Sensory and Flavor Tables
 
 ### sensory_params
-Sensory analysis parameters for coffees.
+Table storing sensory analysis parameters.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| coffee_id | string | Foreign key to coffees table (one-to-one) |
-| acidity | number | Acidity rating |
-| sweetness | number | Sweetness rating |
-| bitterness | number | Bitterness rating |
-| body | number | Body rating |
-| clarity | number | Clarity rating |
-| aftertaste | number | Aftertaste rating |
-| confidence | sensory_confidence_enum | Confidence level (high, medium, low) |
-| source | sensory_source_enum | Source of data (roaster, icb_inferred, icb_manual) |
-| notes | string | Additional notes |
-| created_at | string | Creation timestamp |
-| updated_at | string | Last update timestamp |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| coffee_id | string | No | Foreign key to coffees table |
+| acidity | number | Yes | Acidity rating (1-10) |
+| sweetness | number | Yes | Sweetness rating (1-10) |
+| bitterness | number | Yes | Bitterness rating (1-10) |
+| body | number | Yes | Body rating (1-10) |
+| aftertaste | number | Yes | Aftertaste rating (1-10) |
+| clarity | number | Yes | Clarity rating (1-10) |
+| confidence | sensory_confidence_enum | Yes | Confidence level |
+| source | sensory_source_enum | Yes | Data source |
+| notes | string | Yes | Additional notes |
+| created_at | string | No | Creation timestamp |
+| updated_at | string | No | Last update timestamp |
 
-## System Tables
+**Relationships:**
+- `coffee_id` → `coffees.id` (one-to-one)
+
+### flavor_notes
+Table storing flavor note definitions.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| key | string | No | Flavor note key |
+| label | string | No | Flavor note label |
+| group_key | string | Yes | Group key for categorization |
+
+### coffee_flavor_notes
+Junction table linking coffees to flavor notes.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| coffee_id | string | No | Foreign key to coffees table |
+| flavor_note_id | string | No | Foreign key to flavor_notes table |
+
+**Relationships:**
+- `coffee_id` → `coffees.id`
+- `flavor_note_id` → `flavor_notes.id`
+
+## Image Tables
+
+### coffee_images
+Table storing coffee image information.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| coffee_id | string | No | Foreign key to coffees table |
+| url | string | No | Image URL |
+| imagekit_url | string | Yes | ImageKit URL |
+| alt | string | Yes | Alt text |
+| width | number | Yes | Image width |
+| height | number | Yes | Image height |
+| sort_order | number | No | Sort order |
+| content_hash | string | Yes | Content hash for deduplication |
+| source_raw | Json | Yes | Raw source data |
+
+**Relationships:**
+- `coffee_id` → `coffees.id`
+
+## Brew Method Tables
+
+### brew_methods
+Table storing brew method definitions.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| key | string | No | Brew method key |
+| label | string | No | Brew method label |
+
+### coffee_brew_methods
+Junction table linking coffees to brew methods.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| coffee_id | string | No | Foreign key to coffees table |
+| brew_method_id | string | No | Foreign key to brew_methods table |
+
+**Relationships:**
+- `coffee_id` → `coffees.id`
+- `brew_method_id` → `brew_methods.id`
+
+## Scraping Tables
 
 ### product_sources
-Data sources for product scraping.
+Table storing product source information for scraping.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| roaster_id | string | Foreign key to roasters table |
-| base_url | string | Base URL for scraping |
-| platform | platform_enum | Platform type |
-| products_endpoint | string | Products API endpoint |
-| sitemap_url | string | Sitemap URL |
-| robots_ok | boolean | Whether robots.txt allows scraping |
-| last_ok_ping | string | Last successful ping timestamp |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| roaster_id | string | No | Foreign key to roasters table |
+| base_url | string | No | Base URL for scraping |
+| platform | platform_enum | Yes | E-commerce platform |
+| products_endpoint | string | Yes | Products API endpoint |
+| sitemap_url | string | Yes | Sitemap URL |
+| robots_ok | boolean | Yes | Robots.txt allows scraping |
+| last_ok_ping | string | Yes | Last successful ping |
+
+**Relationships:**
+- `roaster_id` → `roasters.id`
 
 ### scrape_runs
-Scraping run records.
+Table storing scraping run information.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| source_id | string | Foreign key to product_sources table |
-| started_at | string | Start timestamp |
-| finished_at | string | End timestamp |
-| status | run_status_enum | Run status (ok, partial, fail) |
-| stats_json | Json | Run statistics |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| source_id | string | Yes | Foreign key to product_sources table |
+| started_at | string | No | Run start timestamp |
+| finished_at | string | Yes | Run finish timestamp |
+| status | run_status_enum | Yes | Run status |
+| stats_json | Json | Yes | Run statistics |
+
+**Relationships:**
+- `source_id` → `product_sources.id`
 
 ### scrape_artifacts
-Scraped data artifacts.
+Table storing scraping artifacts.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | string | Primary key |
-| run_id | string | Foreign key to scrape_runs table |
-| url | string | Scraped URL |
-| http_status | number | HTTP response status |
-| body_len | number | Response body length |
-| saved_html_path | string | Path to saved HTML |
-| saved_json | Json | Saved JSON data |
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| run_id | string | Yes | Foreign key to scrape_runs table |
+| url | string | Yes | Scraped URL |
+| http_status | number | Yes | HTTP status code |
+| body_len | number | Yes | Response body length |
+| saved_html_path | string | Yes | Path to saved HTML |
+| saved_json | Json | Yes | Saved JSON data |
 
-## Views
+**Relationships:**
+- `run_id` → `scrape_runs.id`
+
+## Database Views
 
 ### coffee_summary
-Summary view of coffees with computed fields.
+View providing summarized coffee information.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | coffee_id | string | Coffee ID |
 | name | string | Coffee name |
-| slug | string | Coffee slug |
 | roaster_id | string | Roaster ID |
+| slug | string | Coffee slug |
 | status | coffee_status_enum | Coffee status |
-| process | process_enum | Process method |
-| process_raw | string | Raw process description |
+| process | process_enum | Processing method |
+| process_raw | string | Raw process text |
 | roast_level | roast_level_enum | Roast level |
-| roast_level_raw | string | Raw roast level |
-| roast_style_raw | string | Roast style |
+| roast_level_raw | string | Raw roast level text |
+| roast_style_raw | string | Raw roast style text |
 | direct_buy_url | string | Direct buy URL |
 | has_250g_bool | boolean | Whether 250g variant exists |
 | has_sensory | boolean | Whether sensory data exists |
 | in_stock_count | number | Number of in-stock variants |
 | min_price_in_stock | number | Minimum in-stock price |
-| best_normalized_250g | number | Best normalized 250g price |
 | best_variant_id | string | Best variant ID |
+| best_normalized_250g | number | Best normalized 250g price |
 | weights_available | number[] | Available weights |
 | sensory_public | Json | Public sensory data |
 | sensory_updated_at | string | Sensory data update timestamp |
 
 ### variant_computed
-Computed variant data.
+View providing computed variant information.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | variant_id | string | Variant ID |
 | coffee_id | string | Coffee ID |
-| grind | grind_enum | Grind type |
 | weight_g | number | Weight in grams |
+| grind | grind_enum | Grind type |
 | pack_count | number | Pack count |
 | currency | string | Currency |
-| in_stock | boolean | In stock status |
-| price_one_time | number | One-time price |
+| in_stock | boolean | Whether in stock |
 | compare_at_price | number | Compare at price |
+| price_one_time | number | One-time price |
 | normalized_250g | number | Normalized 250g price |
-| valid_for_best_value | boolean | Valid for best value calculation |
-| scraped_at_latest | string | Latest scraping timestamp |
+| valid_for_best_value | boolean | Whether valid for best value |
+| scraped_at_latest | string | Latest scrape timestamp |
 
 ### variant_latest_price
-Latest price information for variants.
+View providing latest price information for variants.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | variant_id | string | Variant ID |
 | coffee_id | string | Coffee ID |
-| grind | grind_enum | Grind type |
 | weight_g | number | Weight in grams |
+| grind | grind_enum | Grind type |
 | pack_count | number | Pack count |
 | currency | string | Currency |
-| in_stock | boolean | In stock status |
-| price_one_time | number | One-time price |
+| in_stock | boolean | Whether in stock |
+| is_sale | boolean | Whether on sale |
 | compare_at_price | number | Compare at price |
-| is_sale | boolean | Whether price is a sale |
-| scraped_at_latest | string | Latest scraping timestamp |
+| price_one_time | number | One-time price |
+| scraped_at_latest | string | Latest scrape timestamp |
+
+## Indexes and Constraints
+
+### Primary Keys
+All tables have UUID primary keys.
+
+### Foreign Key Constraints
+- All foreign key relationships are enforced
+- Cascade deletes are configured appropriately
+- Referential integrity is maintained
+
+### Unique Constraints
+- `coffees.slug` is unique per roaster
+- `roasters.slug` is unique
+- `variants.platform_variant_id` is unique per coffee
+- `prices` has unique constraint on variant_id + scraped_at
+
+### Indexes
+- Performance indexes on frequently queried columns
+- Composite indexes for complex queries
+- Full-text search indexes on text fields
+
+## Data Types
+
+### JSON Fields
+- `notes_raw`: Raw notes data from various sources
+- `source_raw`: Raw source data from scraping
+- `social_json`: Social media information
+- `stats_json`: Scraping run statistics
+
+### Array Fields
+- `varieties`: Array of coffee varieties
+- `tags`: Array of product tags
+- `weights_available`: Array of available weights
+
+### Enum Fields
+All enum fields use the database enum types defined in the schema.
+
+## Best Practices
+
+1. **Data Integrity**: Use foreign key constraints and check constraints
+2. **Performance**: Create appropriate indexes for query patterns
+3. **Scalability**: Use UUIDs for primary keys
+4. **Flexibility**: Use JSON fields for extensible data
+5. **Auditing**: Include created_at and updated_at timestamps
+6. **Soft Deletes**: Use status fields instead of hard deletes where appropriate

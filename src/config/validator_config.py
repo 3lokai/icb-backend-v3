@@ -6,6 +6,8 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
 from .imagekit_config import ImageKitConfig
+from .tag_config import TagConfig
+from .notes_config import NotesConfig
 
 
 class ValidatorConfig(BaseModel):
@@ -31,6 +33,12 @@ class ValidatorConfig(BaseModel):
     # Process parser configuration
     enable_process_parsing: bool = Field(default=True, description="Enable process method parsing")
     process_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Minimum confidence for process parsing")
+    # Tag normalization configuration
+    enable_tag_normalization: bool = Field(default=True, description="Enable tag normalization")
+    tag_config: Optional[TagConfig] = Field(default=None, description="Tag normalization configuration")
+    # Notes extraction configuration
+    enable_notes_extraction: bool = Field(default=True, description="Enable notes extraction")
+    notes_config: Optional[NotesConfig] = Field(default=None, description="Notes extraction configuration")
     
     @field_validator('storage_path', 'invalid_artifacts_path')
     @classmethod

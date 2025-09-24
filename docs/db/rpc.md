@@ -48,175 +48,212 @@ Send function for case-insensitive text.
 ## Coffee Management Functions
 
 ### rpc_upsert_coffee
-Creates or updates a coffee record.
-
-**Parameters:**
-- `p_bean_species` (species_enum): Coffee species
-- `p_decaf` (boolean, optional): Whether coffee is decaffeinated
-- `p_description_md` (string): Markdown description
-- `p_direct_buy_url` (string): Direct purchase URL
-- `p_name` (string): Coffee name
-- `p_notes_raw` (Json, optional): Raw notes data
-- `p_platform_product_id` (string): Platform product ID
-- `p_process` (process_enum): Processing method
-- `p_process_raw` (string): Raw process description
-- `p_roast_level` (roast_level_enum): Roast level
-- `p_roast_level_raw` (string): Raw roast level description
-- `p_roast_style_raw` (string): Roast style description
-- `p_roaster_id` (string): Roaster ID
-- `p_slug` (string): URL-friendly slug
-- `p_source_raw` (Json, optional): Raw source data
-- `p_status` (coffee_status_enum, optional): Coffee status
-
-**Returns:** string (coffee ID)
+```sql
+rpc_upsert_coffee(
+  p_bean_species: species_enum,
+  p_process: process_enum,
+  p_roast_level: roast_level_enum,
+  p_roaster_id: string,
+  p_platform_product_id: string,
+  p_name: string,
+  p_slug: string,
+  p_description_md: string,
+  p_direct_buy_url: string,
+  p_process_raw: string,
+  p_roast_level_raw: string,
+  p_roast_style_raw: string,
+  p_decaf?: boolean,
+  p_notes_raw?: Json,
+  p_source_raw?: Json,
+  p_status?: coffee_status_enum,
+  p_tags?: string[],
+  p_default_grind?: grind_enum,
+  p_varieties?: string[],
+  p_region?: string,
+  p_country?: string,
+  p_altitude?: number,
+  p_acidity?: number,
+  p_body?: number,
+  p_flavors?: string[],
+  p_content_hash?: string,
+  p_raw_hash?: string,
+  p_title_cleaned?: string,
+  p_description_cleaned?: string
+) -> string
+```
+Upserts a coffee record and returns the coffee ID. Now includes Epic C normalization parameters for tags, geographic data, sensory parameters, and text cleaning.
 
 ### rpc_upsert_coffee_flavor_note
-Links a coffee to a flavor note.
-
-**Parameters:**
-- `p_coffee_id` (string): Coffee ID
-- `p_flavor_note_id` (string): Flavor note ID
-
-**Returns:** boolean (success status)
+```sql
+rpc_upsert_coffee_flavor_note(
+  p_coffee_id: string,
+  p_flavor_note_id: string
+) -> boolean
+```
+Associates a flavor note with a coffee.
 
 ### rpc_upsert_coffee_image
-Creates or updates a coffee image.
+```sql
+rpc_upsert_coffee_image(
+  p_alt?: string,
+  p_coffee_id: string,
+  p_content_hash?: string,
+  p_height?: number,
+  p_imagekit_url?: string,
+  p_sort_order?: number,
+  p_source_raw?: Json,
+  p_url: string,
+  p_width?: number
+) -> string
+```
+Upserts a coffee image and returns the image ID. Now includes ImageKit CDN URL support.
 
-**Parameters:**
-- `p_coffee_id` (string): Coffee ID
-- `p_url` (string): Image URL
-- `p_alt` (string, optional): Alt text
-- `p_height` (number, optional): Image height
-- `p_width` (number, optional): Image width
-- `p_sort_order` (number, optional): Display order
-- `p_source_raw` (Json, optional): Raw source data
-
-**Returns:** string (image ID)
+### rpc_upsert_flavor_note
+```sql
+rpc_upsert_flavor_note(
+  p_group_key?: string,
+  p_key: string,
+  p_label: string
+) -> string
+```
+Upserts a flavor note and returns the flavor note ID.
 
 ## Roaster Management Functions
 
 ### rpc_upsert_roaster
-Creates or updates a roaster record.
-
-**Parameters:**
-- `p_name` (string): Roaster name
-- `p_slug` (string): URL-friendly slug
-- `p_platform` (platform_enum): Platform type
-- `p_website` (string): Website URL
-- `p_instagram_handle` (string, optional): Instagram handle
-- `p_social_json` (Json, optional): Social media data
-- `p_support_email` (string, optional): Support email
-
-**Returns:** string (roaster ID)
-
-## Flavor Notes Functions
-
-### rpc_upsert_flavor_note
-Creates or updates a flavor note.
-
-**Parameters:**
-- `p_key` (string): Unique identifier
-- `p_label` (string): Human-readable name
-- `p_group_key` (string, optional): Grouping key
-
-**Returns:** string (flavor note ID)
+```sql
+rpc_upsert_roaster(
+  p_instagram_handle?: string,
+  p_name: string,
+  p_platform: platform_enum,
+  p_slug: string,
+  p_social_json?: Json,
+  p_support_email?: string,
+  p_website: string
+) -> string
+```
+Upserts a roaster record and returns the roaster ID.
 
 ## Variant Management Functions
 
 ### rpc_upsert_variant
-Creates or updates a coffee variant.
-
-**Parameters:**
-- `p_coffee_id` (string): Coffee ID
-- `p_platform_variant_id` (string): Platform variant ID
-- `p_sku` (string): SKU
-- `p_weight_g` (number): Weight in grams
-- `p_grind` (grind_enum, optional): Grind type
-- `p_pack_count` (number, optional): Number of packs
-- `p_currency` (string, optional): Currency code
-- `p_in_stock` (boolean, optional): Stock status
-- `p_stock_qty` (number, optional): Stock quantity
-- `p_subscription_available` (boolean, optional): Subscription availability
-- `p_compare_at_price` (number, optional): Compare at price
-- `p_source_raw` (Json, optional): Raw source data
-
-**Returns:** string (variant ID)
-
-**Note:** This function has two overloads - one with all parameters and one without `p_stock_qty` and `p_subscription_available`.
+```sql
+rpc_upsert_variant(
+  p_coffee_id: string,
+  p_compare_at_price?: number,
+  p_currency?: string,
+  p_grind?: grind_enum,
+  p_in_stock?: boolean,
+  p_pack_count?: number,
+  p_platform_variant_id: string,
+  p_sku: string,
+  p_source_raw?: Json,
+  p_stock_qty?: number,
+  p_subscription_available?: boolean,
+  p_weight_g: number
+) -> string
+```
+Upserts a coffee variant and returns the variant ID.
 
 ## Price Management Functions
 
 ### rpc_insert_price
-Inserts a new price record.
-
-**Parameters:**
-- `p_variant_id` (string): Variant ID
-- `p_price` (number): Price value
-- `p_currency` (string, optional): Currency code
-- `p_is_sale` (boolean, optional): Whether price is a sale
-- `p_scraped_at` (string, optional): Scraping timestamp
-- `p_source_url` (string, optional): Source URL
-- `p_source_raw` (Json, optional): Raw source data
-
-**Returns:** string (price ID)
-
-**Note:** This function has two overloads with identical parameters.
+```sql
+rpc_insert_price(
+  p_currency?: string,
+  p_is_sale?: boolean,
+  p_price: number,
+  p_scraped_at?: string,
+  p_source_raw?: Json,
+  p_source_url?: string,
+  p_variant_id: string
+) -> string
+```
+Inserts a new price record and returns the price ID.
 
 ## Scraping Functions
 
 ### rpc_scrape_run_start
-Starts a new scraping run.
-
-**Parameters:**
-- `p_source_id` (string): Product source ID
-
-**Returns:** string (run ID)
+```sql
+rpc_scrape_run_start(
+  p_source_id: string
+) -> string
+```
+Starts a new scraping run and returns the run ID.
 
 ### rpc_scrape_run_finish
-Finishes a scraping run.
-
-**Parameters:**
-- `p_run_id` (string): Run ID
-- `p_status` (run_status_enum): Run status
-- `p_stats` (Json): Run statistics
-
-**Returns:** undefined
+```sql
+rpc_scrape_run_finish(
+  p_run_id: string,
+  p_stats: Json,
+  p_status: run_status_enum
+) -> undefined
+```
+Finishes a scraping run with statistics and status.
 
 ### rpc_record_artifact
-Records a scraping artifact.
+```sql
+rpc_record_artifact(
+  p_body_len: number,
+  p_http_status: number,
+  p_run_id: string,
+  p_saved_html_path?: string,
+  p_saved_json?: Json,
+  p_url: string
+) -> string
+```
+Records a scraping artifact and returns the artifact ID.
 
-**Parameters:**
-- `p_run_id` (string): Run ID
-- `p_url` (string): Scraped URL
-- `p_http_status` (number): HTTP status code
-- `p_body_len` (number): Response body length
-- `p_saved_html_path` (string, optional): Path to saved HTML
-- `p_saved_json` (Json, optional): Saved JSON data
+## Image Management Functions
 
-**Returns:** string (artifact ID)
+### rpc_check_content_hash
+```sql
+rpc_check_content_hash(
+  p_content_hash: string
+) -> string
+```
+Checks for existing content hash and returns the image ID if found.
 
-## Utility Functions
+### rpc_check_duplicate_image_hash
+```sql
+rpc_check_duplicate_image_hash(
+  p_content_hash: string
+) -> string
+```
+Checks for duplicate image content hash and returns the duplicate image ID if found.
+
+## Epic C Functions
+
+### get_epic_c_parameters
+```sql
+get_epic_c_parameters(
+  p_coffee_id: string
+) -> Json
+```
+Retrieves Epic C normalization parameters for a specific coffee.
+
+## Legacy Functions
 
 ### map_roast_legacy
-Maps legacy roast level descriptions to enum values.
-
-**Parameters:**
-- `raw` (string): Raw roast level description
-
-**Returns:** roast_level_enum (mapped roast level)
+```sql
+map_roast_legacy(
+  raw: string
+) -> roast_level_enum
+```
+Maps legacy roast level strings to the current roast level enum.
 
 ## GraphQL Functions
 
 ### graphql
-Executes GraphQL queries.
-
-**Parameters:**
-- `query` (string, optional): GraphQL query
-- `variables` (Json, optional): Query variables
-- `operationName` (string, optional): Operation name
-- `extensions` (Json, optional): Extensions
-
-**Returns:** Json (query result)
+```sql
+graphql(
+  extensions?: Json,
+  operationName?: string,
+  query?: string,
+  variables?: Json
+) -> Json
+```
+Executes GraphQL queries against the database.
 
 ## Function Usage Examples
 
@@ -224,51 +261,72 @@ Executes GraphQL queries.
 ```sql
 SELECT rpc_upsert_coffee(
   p_bean_species := 'arabica',
+  p_process := 'washed',
+  p_roast_level := 'light',
+  p_roaster_id := 'roaster_456',
+  p_platform_product_id := 'prod_123',
   p_name := 'Ethiopian Yirgacheffe',
   p_slug := 'ethiopian-yirgacheffe',
-  p_roaster_id := 'roaster-123',
-  p_process := 'washed',
-  p_process_raw := 'Fully Washed',
-  p_roast_level := 'light',
+  p_description_md := 'A bright and fruity Ethiopian coffee',
+  p_direct_buy_url := 'https://roaster.com/coffee/ethiopian',
+  p_process_raw := 'Washed Process',
   p_roast_level_raw := 'Light Roast',
   p_roast_style_raw := 'City Roast',
-  p_description_md := '# Ethiopian Yirgacheffe\nA bright and floral coffee...',
-  p_direct_buy_url := 'https://roaster.com/ethiopian-yirgacheffe',
-  p_platform_product_id := 'prod-123'
+  p_decaf := false,
+  p_tags := ARRAY['fruity', 'bright', 'ethiopian'],
+  p_varieties := ARRAY['heirloom'],
+  p_region := 'Yirgacheffe',
+  p_country := 'Ethiopia',
+  p_altitude := 2000,
+  p_acidity := 8.5,
+  p_body := 6.0,
+  p_flavors := ARRAY['blueberry', 'lemon', 'jasmine']
 );
 ```
 
-### Adding a Flavor Note
+### Creating a Variant
 ```sql
-SELECT rpc_upsert_coffee_flavor_note(
-  p_coffee_id := 'coffee-123',
-  p_flavor_note_id := 'flavor-456'
+SELECT rpc_upsert_variant(
+  p_coffee_id := 'coffee_789',
+  p_currency := 'INR',
+  p_grind := 'whole',
+  p_in_stock := true,
+  p_pack_count := 1,
+  p_platform_variant_id := 'var_123',
+  p_sku := 'ETH-WHOLE-250',
+  p_weight_g := 250
 );
 ```
 
 ### Recording a Price
 ```sql
 SELECT rpc_insert_price(
-  p_variant_id := 'variant-123',
-  p_price := 25.99,
-  p_currency := 'USD',
+  p_currency := 'INR',
   p_is_sale := false,
-  p_scraped_at := '2024-01-01T12:00:00Z'
+  p_price := 450.00,
+  p_variant_id := 'variant_123'
 );
 ```
 
-### Starting a Scrape Run
-```sql
-SELECT rpc_scrape_run_start(
-  p_source_id := 'source-123'
-);
-```
+## Error Handling
 
-### Finishing a Scrape Run
-```sql
-SELECT rpc_scrape_run_finish(
-  p_run_id := 'run-123',
-  p_status := 'ok',
-  p_stats := '{"pages_scraped": 50, "products_found": 25}'::json
-);
-```
+All RPC functions return appropriate error messages for invalid inputs:
+
+- **Invalid enum values**: Functions will reject invalid enum values
+- **Missing required parameters**: Functions will return error for missing required fields
+- **Foreign key violations**: Functions will return error for invalid foreign key references
+- **Duplicate constraints**: Functions will handle duplicate key violations appropriately
+
+## Performance Considerations
+
+1. **Batch Operations**: Use batch operations when possible to reduce round trips
+2. **Index Usage**: RPC functions leverage database indexes for optimal performance
+3. **Transaction Safety**: All RPC functions are transaction-safe
+4. **Concurrent Access**: Functions handle concurrent access appropriately
+
+## Security
+
+1. **Input Validation**: All inputs are validated before processing
+2. **SQL Injection**: RPC functions are protected against SQL injection
+3. **Access Control**: Functions respect database-level access controls
+4. **Audit Trail**: All operations are logged for audit purposes
