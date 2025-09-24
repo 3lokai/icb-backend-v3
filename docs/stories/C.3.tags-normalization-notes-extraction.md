@@ -1,7 +1,7 @@
 # Story C.3: Tags normalization & notes extraction
 
 ## Status
-Ready for Review
+Ready for Done
 
 ## Story
 **As a** data processing engineer,

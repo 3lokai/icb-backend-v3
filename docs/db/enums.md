@@ -41,6 +41,7 @@ This document describes all enumerated types (enums) used in the database schema
 - `south indian filter` - South Indian filter grind
 - `moka pot` - Moka pot grind
 - `pour over` - Pour over grind
+- `syphon` - Syphon/vacuum brewing grind
 
 **Usage:** Used in the `variants` table to specify the grind type for coffee variants.
 
@@ -130,6 +131,15 @@ This document describes all enumerated types (enums) used in the database schema
 - `robusta` - Robusta coffee species
 - `liberica` - Liberica coffee species
 - `blend` - Blend of multiple species
+- `arabica_80_robusta_20` - 80% Arabica, 20% Robusta blend
+- `arabica_70_robusta_30` - 70% Arabica, 30% Robusta blend
+- `arabica_60_robusta_40` - 60% Arabica, 40% Robusta blend
+- `arabica_50_robusta_50` - 50% Arabica, 50% Robusta blend
+- `robusta_80_arabica_20` - 80% Robusta, 20% Arabica blend
+- `arabica_chicory` - Arabica coffee with chicory
+- `robusta_chicory` - Robusta coffee with chicory
+- `blend_chicory` - Mixed blend with chicory
+- `filter_coffee_mix` - Traditional South Indian filter coffee mix
 
 **Usage:** Used in the `coffees` table to specify the coffee species.
 
@@ -167,7 +177,7 @@ export const Constants = {
         "turkish", "moka", "cold_brew", "aeropress", "channi",
         "coffee filter", "cold brew", "french press", 
         "home espresso", "commercial espresso", "inverted aeropress",
-        "south indian filter", "moka pot", "pour over"
+        "south indian filter", "moka pot", "pour over", "syphon"
       ],
       platform_enum: ["shopify", "woocommerce", "custom", "other"],
       process_enum: [
@@ -181,7 +191,14 @@ export const Constants = {
       run_status_enum: ["ok", "partial", "fail"],
       sensory_confidence_enum: ["high", "medium", "low"],
       sensory_source_enum: ["roaster", "icb_inferred", "icb_manual"],
-      species_enum: ["arabica", "robusta", "liberica", "blend"]
+      species_enum: [
+        "arabica", "robusta", "liberica", "blend",
+        "arabica_80_robusta_20", "arabica_70_robusta_30", 
+        "arabica_60_robusta_40", "arabica_50_robusta_50", 
+        "robusta_80_arabica_20",
+        "arabica_chicory", "robusta_chicory", "blend_chicory", 
+        "filter_coffee_mix"
+      ]
     }
   }
 }

@@ -1,9 +1,15 @@
 # Story C.4: Grind & bean species parser
 
 ## Status
-Draft
+Split into C.4a and C.4b
 
 ## Story
+**SPLIT INTO TWO STORIES:**
+
+- **C.4a: Grind/Brewing Method Parser (from Variants)** - Parses grind/brewing methods from product variants (Shopify `option2`, WooCommerce `attributes`)
+- **C.4b: Bean Species Parser (from Content)** - Parses bean species from product titles/descriptions
+
+**Original Story:**
 **As a** data processing engineer,
 **I want** to parse grind types and bean species from product titles/descriptions to enhance the existing coffee artifact mapping,
 **so that** I can provide consistent grind and species categorization for coffee products following the established C.2 pattern without creating separate database operations.
@@ -254,3 +260,4 @@ Based on Epic C requirements and A.1-A.5 integration:
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
 | 2025-01-12 | 1.0 | Initial story creation with A.1-A.5 integration strategy | Bob (Scrum Master) |
+| 2025-01-12 | 2.0 | Split into C.4a (grind/brewing from variants) and C.4b (species from content) | Bob (Scrum Master) |
