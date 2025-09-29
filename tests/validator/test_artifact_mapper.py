@@ -221,8 +221,8 @@ class TestArtifactMapper:
         coffee = result['coffee']
         assert coffee['p_bean_species'] is None  # None when normalization is missing
         assert coffee['p_name'] == 'Test Coffee'  # From product title
-        assert coffee['p_process'] == 'other'  # Default
-        assert coffee['p_roast_level'] == 'unknown'  # Default
+        assert coffee['p_process'] is None  # None when normalization is missing
+        assert coffee['p_roast_level'] is None  # None when normalization is missing
         assert coffee['p_notes_raw'] is None
     
     def test_map_artifact_without_audit(self):

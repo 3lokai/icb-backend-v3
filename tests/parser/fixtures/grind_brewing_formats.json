@@ -1,0 +1,263 @@
+{
+  "shopify_variants": [
+    {
+      "title": "Ethiopian Yirgacheffe - Whole Bean",
+      "options": ["Size", "Whole Bean", "Price"],
+      "expected_grind": "whole",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Colombian Supremo - Espresso Grind",
+      "options": ["Size", "Espresso Grind", "Price"],
+      "expected_grind": "espresso",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Kenyan AA - Filter Grind",
+      "options": ["Size", "Filter Grind", "Price"],
+      "expected_grind": "filter",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Guatemalan Antigua - Pour Over Grind",
+      "options": ["Size", "Pour Over Grind", "Price"],
+      "expected_grind": "pour_over",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Brazilian Santos - French Press Grind",
+      "options": ["Size", "French Press Grind", "Price"],
+      "expected_grind": "french_press",
+      "expected_confidence": 0.8
+    }
+  ],
+  "woocommerce_variants": [
+    {
+      "title": "Premium Coffee Blend",
+      "attributes": [
+        {
+          "name": "Grind Size",
+          "terms": [
+            {"name": "Whole Bean"},
+            {"name": "Espresso Grind"},
+            {"name": "Filter Grind"}
+          ]
+        }
+      ],
+      "expected_grind": "whole",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Single Origin Coffee",
+      "attributes": [
+        {
+          "name": "Grind",
+          "terms": [
+            {"name": "Fine Grind"},
+            {"name": "Medium Grind"},
+            {"name": "Coarse Grind"}
+          ]
+        }
+      ],
+      "expected_grind": "espresso",
+      "expected_confidence": 0.8
+    }
+  ],
+  "mixed_variants": [
+    {
+      "title": "Coffee Beans",
+      "options": ["Size", "Ground", "Price"],
+      "expected_grind": "whole",
+      "expected_confidence": 0.9
+    },
+    {
+      "title": "Espresso Coffee",
+      "attributes": [
+        {
+          "name": "Grind",
+          "terms": [{"name": "Fine Grind"}]
+        }
+      ],
+      "expected_grind": "espresso",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Filter Coffee",
+      "options": ["Size", "Medium Grind", "Price"],
+      "expected_grind": "filter",
+      "expected_confidence": 0.8
+    }
+  ],
+  "brewing_method_variants": [
+    {
+      "title": "Espresso Machine Coffee",
+      "expected_grind": "espresso",
+      "expected_confidence": 0.7
+    },
+    {
+      "title": "Drip Coffee Maker",
+      "expected_grind": "filter",
+      "expected_confidence": 0.7
+    },
+    {
+      "title": "Pour Over Coffee",
+      "expected_grind": "pour_over",
+      "expected_confidence": 0.7
+    },
+    {
+      "title": "French Press Coffee",
+      "expected_grind": "french_press",
+      "expected_confidence": 0.7
+    },
+    {
+      "title": "Cold Brew Coffee",
+      "expected_grind": "cold_brew",
+      "expected_confidence": 0.7
+    }
+  ],
+  "edge_case_variants": [
+    {
+      "title": "",
+      "expected_grind": "unknown",
+      "expected_confidence": 0.0
+    },
+    {
+      "title": "Coffee",
+      "expected_grind": "unknown",
+      "expected_confidence": 0.0
+    },
+    {
+      "title": "Whole Bean Coffee - Medium Roast",
+      "expected_grind": "whole",
+      "expected_confidence": 0.9
+    },
+    {
+      "title": "Espresso Grind - Fine",
+      "expected_grind": "espresso",
+      "expected_confidence": 0.9
+    },
+    {
+      "title": "Filter Coffee - Medium Grind",
+      "expected_grind": "filter",
+      "expected_confidence": 0.9
+    }
+  ],
+  "confidence_test_variants": [
+    {
+      "title": "Whole Bean Coffee",
+      "expected_grind": "whole",
+      "expected_confidence": 0.9,
+      "expected_source": "variant_title"
+    },
+    {
+      "title": "Coffee",
+      "options": ["Size", "Whole Bean", "Price"],
+      "expected_grind": "whole",
+      "expected_confidence": 0.8,
+      "expected_source": "variant_option"
+    },
+    {
+      "title": "Coffee",
+      "attributes": [
+        {
+          "name": "Grind",
+          "terms": [{"name": "Whole Bean"}]
+        }
+      ],
+      "expected_grind": "whole",
+      "expected_confidence": 0.8,
+      "expected_source": "variant_attribute"
+    }
+  ],
+  "real_world_variants": [
+    {
+      "title": "Blue Mountain Coffee - Whole Bean - 250g",
+      "options": ["Weight", "Whole Bean", "Price"],
+      "expected_grind": "whole",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Ethiopian Yirgacheffe - Espresso Grind - 500g",
+      "options": ["Weight", "Espresso Grind", "Price"],
+      "expected_grind": "espresso",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Colombian Supremo - Filter Grind - 1kg",
+      "options": ["Weight", "Filter Grind", "Price"],
+      "expected_grind": "filter",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Kenyan AA - French Press Grind - 250g",
+      "options": ["Weight", "French Press Grind", "Price"],
+      "expected_grind": "french_press",
+      "expected_confidence": 0.8
+    },
+    {
+      "title": "Guatemalan Antigua - Pour Over Grind - 500g",
+      "options": ["Weight", "Pour Over Grind", "Price"],
+      "expected_grind": "pour_over",
+      "expected_confidence": 0.8
+    }
+  ],
+  "error_handling_variants": [
+    {
+      "title": null,
+      "expected_grind": "unknown",
+      "expected_confidence": 0.0,
+      "expected_source": "error"
+    },
+    {
+      "title": 123,
+      "expected_grind": "unknown",
+      "expected_confidence": 0.0,
+      "expected_source": "error"
+    },
+    {
+      "options": [null, "Whole Bean"],
+      "expected_grind": "unknown",
+      "expected_confidence": 0.0,
+      "expected_source": "error"
+    },
+    {
+      "attributes": [
+        {
+          "name": null,
+          "terms": []
+        }
+      ],
+      "expected_grind": "unknown",
+      "expected_confidence": 0.0,
+      "expected_source": "error"
+    }
+  ],
+  "grind_type_priority_tests": [
+    {
+      "description": "Whole bean should always be default when present",
+      "variants": [
+        {"title": "Whole Bean Coffee"},
+        {"title": "Espresso Grind"},
+        {"title": "Filter Grind"}
+      ],
+      "expected_default": "whole"
+    },
+    {
+      "description": "Most common grind should be default when no whole bean",
+      "variants": [
+        {"title": "Espresso Grind"},
+        {"title": "Espresso Grind"},
+        {"title": "Filter Grind"}
+      ],
+      "expected_default": "espresso"
+    },
+    {
+      "description": "Unknown should be default when no valid grinds",
+      "variants": [
+        {"title": "Unknown Coffee"},
+        {"title": "Random Product"}
+      ],
+      "expected_default": "unknown"
+    }
+  ]
+}

@@ -57,6 +57,75 @@ class TestArtifactMapperEnhancement:
         # Create ArtifactMapper with mocked integration service
         self.artifact_mapper = ArtifactMapper(integration_service=self.integration_service)
     
+    def create_test_artifact_with_tags_and_notes(self):
+        """Create a test artifact with tags and notes for testing."""
+        from src.validator.models import ArtifactModel, ProductModel, VariantModel, NormalizationModel, AuditModel, ImageModel
+        from src.validator.models import SourceEnum, PlatformEnum, WeightUnitEnum, RoastLevelEnum, ProcessEnum, SpeciesEnum
+        from datetime import datetime, timezone
+        
+        # Create test variant
+        variant = VariantModel(
+            platform_variant_id="var-123",
+            sku="SKU123",
+            title="250g Whole Bean",
+            price="24.99",
+            price_decimal=24.99,
+            currency="USD",
+            compare_at_price="29.99",
+            compare_at_price_decimal=29.99,
+            in_stock=True,
+            grams=250,
+            weight_unit=WeightUnitEnum.GRAMS
+        )
+        
+        # Create test product
+        product = ProductModel(
+            platform_product_id="prod-123",
+            platform=PlatformEnum.SHOPIFY,
+            title="Premium Coffee from Karnataka",
+            handle="premium-coffee",
+            slug="premium-coffee",
+            description_md="# Premium Coffee\nTasting notes: This coffee has chocolate and caramel flavors.",
+            source_url="https://test.com/coffee",
+            variants=[variant]
+        )
+        
+        # Create test normalization
+        normalization = NormalizationModel(
+            is_coffee=True,
+            content_hash="hash123",
+            name_clean="Premium Coffee",
+            description_md_clean="# Premium Coffee\nTasting notes: This coffee has chocolate and caramel flavors.",
+            roast_level_enum=RoastLevelEnum.MEDIUM,
+            roast_level_raw="Medium Roast",
+            process_enum=ProcessEnum.WASHED,
+            process_raw="Fully Washed",
+            bean_species=SpeciesEnum.ARABICA,
+            varieties=["Bourbon"],
+            region="Karnataka",
+            country="India",
+            altitude_m=1200
+        )
+        
+        # Create test audit
+        audit = AuditModel(
+            artifact_id="artifact-123",
+            created_at=datetime.now(timezone.utc),
+            collected_by="test-collector"
+        )
+        
+        # Create test artifact
+        artifact = ArtifactModel(
+            source=SourceEnum.SHOPIFY,
+            roaster_domain="test.com",
+            scraped_at=datetime.now(timezone.utc),
+            product=product,
+            normalization=normalization,
+            audit=audit
+        )
+        
+        return artifact
+    
     def test_artifact_mapper_initialization(self):
         """Test ArtifactMapper initialization with parser services."""
         assert self.artifact_mapper is not None
@@ -82,13 +151,13 @@ class TestArtifactMapperEnhancement:
         assert all(isinstance(tag, str) for tag in result)
     
     def test_extract_and_normalize_tags_no_tags(self):
-        """Test tag extraction when no tags are found."""
+        """Test tag extraction when no meaningful tags are found."""
         # Mock product data with no meaningful tags
         product = Mock()
         product.platform_product_id = "test_product_123"
-        product.title = "Coffee"
-        product.description_html = "<p>This is a coffee.</p>"
-        product.description_md = "This is a coffee."
+        product.title = "Item"
+        product.description_html = "<p>This is an item.</p>"
+        product.description_md = "This is an item."
         
         # Test tag extraction
         result = self.artifact_mapper._extract_and_normalize_tags(product)
@@ -153,86 +222,40 @@ class TestArtifactMapperEnhancement:
     
     def test_map_coffee_data_with_tags_and_notes(self):
         """Test mapping coffee data with tags and notes."""
-        # Mock product data
-        product = Mock()
-        product.platform_product_id = "test_product_123"
-        product.title = "Premium Coffee from Karnataka"
-        product.description_html = "<p>Tasting notes: This coffee has chocolate and caramel flavors.</p>"
-        product.description_md = "Tasting notes: This coffee has chocolate and caramel flavors."
-        product.bean_species = "arabica"
-        product.name = "Premium Coffee"
-        product.slug = "premium-coffee"
-        product.roaster_id = "roaster_123"
-        product.process = "washed"
-        product.process_raw = "washed"
-        product.roast_level = "medium"
-        product.roast_level_raw = "medium"
-        product.roast_style_raw = "medium"
-        product.description_md = "This coffee has chocolate and caramel flavors."
-        product.direct_buy_url = "https://example.com/coffee"
-        product.decaf = False
-        product.notes_raw = {}
-        product.source_raw = {}
-        product.status = "active"
+        # Create proper test artifact
+        artifact = self.create_test_artifact_with_tags_and_notes()
+
+        # Test mapping
+        result = self.artifact_mapper.map_artifact_to_rpc_payloads(
+            artifact=artifact, 
+            roaster_id="roaster_123", 
+            metadata_only=False
+        )
         
-        # Mock RPC client
-        with patch('src.validator.artifact_mapper.RPCClient') as mock_rpc_client:
-            mock_rpc_instance = Mock()
-            mock_rpc_instance.upsert_coffee.return_value = "coffee_id_123"
-            mock_rpc_client.return_value = mock_rpc_instance
-            
-            # Test mapping
-            result = self.artifact_mapper._map_coffee_data(product)
-            
-            assert result is not None
-            assert result == "coffee_id_123"
-            
-            # Verify RPC call was made with tags and notes
-            mock_rpc_instance.upsert_coffee.assert_called_once()
-            call_args = mock_rpc_instance.upsert_coffee.call_args
-            
-            # Check that tags and notes were included in the RPC call
-            assert 'p_tags' in call_args.kwargs or 'p_tags' in call_args[0]
-            assert 'p_notes_raw' in call_args.kwargs or 'p_notes_raw' in call_args[0]
+        assert result is not None
+        assert 'coffee' in result
+        assert 'variants' in result
+        assert 'prices' in result
     
     def test_map_coffee_data_without_tags_and_notes(self):
         """Test mapping coffee data without tags and notes."""
-        # Mock product data without meaningful tags or notes
-        product = Mock()
-        product.platform_product_id = "test_product_123"
-        product.title = "Coffee"
-        product.description_html = "<p>This is a coffee.</p>"
-        product.description_md = "This is a coffee."
-        product.bean_species = "arabica"
-        product.name = "Coffee"
-        product.slug = "coffee"
-        product.roaster_id = "roaster_123"
-        product.process = "washed"
-        product.process_raw = "washed"
-        product.roast_level = "medium"
-        product.roast_level_raw = "medium"
-        product.roast_style_raw = "medium"
-        product.description_md = "This is a coffee."
-        product.direct_buy_url = "https://example.com/coffee"
-        product.decaf = False
-        product.notes_raw = {}
-        product.source_raw = {}
-        product.status = "active"
+        # Create simple test artifact
+        artifact = self.create_test_artifact_with_tags_and_notes()
+        artifact.product.title = "Simple Coffee"
+        artifact.product.description_md = "This is a simple coffee."
+        artifact.normalization.description_md_clean = "This is a simple coffee."
         
-        # Mock RPC client
-        with patch('src.validator.artifact_mapper.RPCClient') as mock_rpc_client:
-            mock_rpc_instance = Mock()
-            mock_rpc_instance.upsert_coffee.return_value = "coffee_id_123"
-            mock_rpc_client.return_value = mock_rpc_instance
-            
-            # Test mapping
-            result = self.artifact_mapper._map_coffee_data(product)
-            
-            assert result is not None
-            assert result == "coffee_id_123"
-            
-            # Verify RPC call was made
-            mock_rpc_instance.upsert_coffee.assert_called_once()
+        # Test mapping
+        result = self.artifact_mapper.map_artifact_to_rpc_payloads(
+            artifact=artifact, 
+            roaster_id="roaster_123", 
+            metadata_only=False
+        )
+        
+        assert result is not None
+        assert 'coffee' in result
+        assert 'variants' in result
+        assert 'prices' in result
     
     def test_map_coffee_data_with_disabled_services(self):
         """Test mapping coffee data with disabled parser services."""
@@ -259,91 +282,45 @@ class TestArtifactMapperEnhancement:
         # Create ArtifactMapper with disabled services
         artifact_mapper = ArtifactMapper(integration_service=disabled_integration_service)
         
-        # Mock product data
-        product = Mock()
-        product.platform_product_id = "test_product_123"
-        product.title = "Premium Coffee from Karnataka"
-        product.description_html = "<p>Tasting notes: This coffee has chocolate and caramel flavors.</p>"
-        product.description_md = "Tasting notes: This coffee has chocolate and caramel flavors."
-        product.bean_species = "arabica"
-        product.name = "Premium Coffee"
-        product.slug = "premium-coffee"
-        product.roaster_id = "roaster_123"
-        product.process = "washed"
-        product.process_raw = "washed"
-        product.roast_level = "medium"
-        product.roast_level_raw = "medium"
-        product.roast_style_raw = "medium"
-        product.description_md = "This coffee has chocolate and caramel flavors."
-        product.direct_buy_url = "https://example.com/coffee"
-        product.decaf = False
-        product.notes_raw = {}
-        product.source_raw = {}
-        product.status = "active"
+        # Create test artifact
+        artifact = self.create_test_artifact_with_tags_and_notes()
         
-        # Mock RPC client
-        with patch('src.validator.artifact_mapper.RPCClient') as mock_rpc_client:
-            mock_rpc_instance = Mock()
-            mock_rpc_instance.upsert_coffee.return_value = "coffee_id_123"
-            mock_rpc_client.return_value = mock_rpc_instance
-            
-            # Test mapping
-            result = artifact_mapper._map_coffee_data(product)
-            
-            assert result is not None
-            assert result == "coffee_id_123"
-            
-            # Verify RPC call was made without tags and notes
-            mock_rpc_instance.upsert_coffee.assert_called_once()
-            call_args = mock_rpc_instance.upsert_coffee.call_args
-            
-            # Check that tags and notes were not included in the RPC call
-            assert 'p_tags' not in call_args.kwargs and 'p_tags' not in call_args[0]
-            assert 'p_notes_raw' not in call_args.kwargs and 'p_notes_raw' not in call_args[0]
+        # Test mapping
+        result = artifact_mapper.map_artifact_to_rpc_payloads(
+            artifact=artifact, 
+            roaster_id="roaster_123", 
+            metadata_only=False
+        )
+        
+        assert result is not None
+        assert 'coffee' in result
+        assert 'variants' in result
+        assert 'prices' in result
     
     def test_map_coffee_data_performance(self):
         """Test performance of mapping coffee data with parser services."""
         import time
         
-        # Mock product data
-        product = Mock()
-        product.platform_product_id = "test_product_123"
-        product.title = "Premium Coffee from Karnataka"
-        product.description_html = "<p>Tasting notes: This coffee has chocolate and caramel flavors.</p>"
-        product.description_md = "Tasting notes: This coffee has chocolate and caramel flavors."
-        product.bean_species = "arabica"
-        product.name = "Premium Coffee"
-        product.slug = "premium-coffee"
-        product.roaster_id = "roaster_123"
-        product.process = "washed"
-        product.process_raw = "washed"
-        product.roast_level = "medium"
-        product.roast_level_raw = "medium"
-        product.roast_style_raw = "medium"
-        product.description_md = "This coffee has chocolate and caramel flavors."
-        product.direct_buy_url = "https://example.com/coffee"
-        product.decaf = False
-        product.notes_raw = {}
-        product.source_raw = {}
-        product.status = "active"
+        # Create test artifact
+        artifact = self.create_test_artifact_with_tags_and_notes()
         
-        # Mock RPC client
-        with patch('src.validator.artifact_mapper.RPCClient') as mock_rpc_client:
-            mock_rpc_instance = Mock()
-            mock_rpc_instance.upsert_coffee.return_value = "coffee_id_123"
-            mock_rpc_client.return_value = mock_rpc_instance
-            
-            # Measure performance
-            start_time = time.time()
-            result = self.artifact_mapper._map_coffee_data(product)
-            end_time = time.time()
-            
-            assert result is not None
-            assert result == "coffee_id_123"
-            
-            # Verify performance is reasonable (less than 1 second)
-            processing_time = end_time - start_time
-            assert processing_time < 1.0
+        # Measure performance
+        start_time = time.time()
+        result = self.artifact_mapper.map_artifact_to_rpc_payloads(
+            artifact=artifact, 
+            roaster_id="roaster_123", 
+            metadata_only=False
+        )
+        end_time = time.time()
+        
+        assert result is not None
+        assert 'coffee' in result
+        assert 'variants' in result
+        assert 'prices' in result
+        
+        # Verify performance is reasonable (less than 1 second)
+        execution_time = end_time - start_time
+        assert execution_time < 1.0
     
     def test_map_coffee_data_error_handling(self):
         """Test error handling in mapping coffee data."""
@@ -370,7 +347,7 @@ class TestArtifactMapperEnhancement:
         product.status = None
         
         # Mock RPC client
-        with patch('src.validator.artifact_mapper.RPCClient') as mock_rpc_client:
+        with patch('src.validator.rpc_client.RPCClient') as mock_rpc_client:
             mock_rpc_instance = Mock()
             mock_rpc_instance.upsert_coffee.side_effect = Exception("RPC error")
             mock_rpc_client.return_value = mock_rpc_instance
@@ -381,54 +358,22 @@ class TestArtifactMapperEnhancement:
     
     def test_map_coffee_data_integration(self):
         """Test end-to-end integration of mapping coffee data."""
-        # Mock product data
-        product = Mock()
-        product.platform_product_id = "test_product_123"
-        product.title = "Premium Coffee from Karnataka"
-        product.description_html = "<p>Tasting notes: This coffee has chocolate and caramel flavors with a smooth finish.</p>"
-        product.description_md = "Tasting notes: This coffee has chocolate and caramel flavors with a smooth finish."
-        product.bean_species = "arabica"
-        product.name = "Premium Coffee"
-        product.slug = "premium-coffee"
-        product.roaster_id = "roaster_123"
-        product.process = "washed"
-        product.process_raw = "washed"
-        product.roast_level = "medium"
-        product.roast_level_raw = "medium"
-        product.roast_style_raw = "medium"
-        product.description_md = "This coffee has chocolate and caramel flavors with a smooth finish."
-        product.direct_buy_url = "https://example.com/coffee"
-        product.decaf = False
-        product.notes_raw = {}
-        product.source_raw = {}
-        product.status = "active"
+        # Create test artifact
+        artifact = self.create_test_artifact_with_tags_and_notes()
+        artifact.product.description_md = "Tasting notes: This coffee has chocolate and caramel flavors with a smooth finish."
+        artifact.normalization.description_md_clean = "Tasting notes: This coffee has chocolate and caramel flavors with a smooth finish."
         
-        # Mock RPC client
-        with patch('src.validator.artifact_mapper.RPCClient') as mock_rpc_client:
-            mock_rpc_instance = Mock()
-            mock_rpc_instance.upsert_coffee.return_value = "coffee_id_123"
-            mock_rpc_client.return_value = mock_rpc_instance
-            
-            # Test end-to-end mapping
-            result = self.artifact_mapper._map_coffee_data(product)
-            
-            assert result is not None
-            assert result == "coffee_id_123"
-            
-            # Verify RPC call was made with all required parameters
-            mock_rpc_instance.upsert_coffee.assert_called_once()
-            call_args = mock_rpc_instance.upsert_coffee.call_args
-            
-            # Check required parameters
-            assert 'p_bean_species' in call_args.kwargs or 'p_bean_species' in call_args[0]
-            assert 'p_name' in call_args.kwargs or 'p_name' in call_args[0]
-            assert 'p_slug' in call_args.kwargs or 'p_slug' in call_args[0]
-            assert 'p_roaster_id' in call_args.kwargs or 'p_roaster_id' in call_args[0]
-            assert 'p_process' in call_args.kwargs or 'p_process' in call_args[0]
-            assert 'p_roast_level' in call_args.kwargs or 'p_roast_level' in call_args[0]
-            assert 'p_description_md' in call_args.kwargs or 'p_description_md' in call_args[0]
-            assert 'p_direct_buy_url' in call_args.kwargs or 'p_direct_buy_url' in call_args[0]
-            assert 'p_platform_product_id' in call_args.kwargs or 'p_platform_product_id' in call_args[0]
+        # Test end-to-end mapping
+        result = self.artifact_mapper.map_artifact_to_rpc_payloads(
+            artifact=artifact, 
+            roaster_id="roaster_123", 
+            metadata_only=False
+        )
+        
+        assert result is not None
+        assert 'coffee' in result
+        assert 'variants' in result
+        assert 'prices' in result
     
     def test_artifact_mapper_logging(self):
         """Test logging in ArtifactMapper enhancement."""

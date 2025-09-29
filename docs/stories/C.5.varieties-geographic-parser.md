@@ -1,41 +1,43 @@
-# Story C.5: Varieties & geographic parser
+# Story C.5: Indian Coffee Varieties & Geographic Parser
 
 ## Status
 Draft
 
 ## Story
 **As a** data processing engineer,
-**I want** to extract coffee varieties, region, country, and altitude from product descriptions to enhance the existing coffee artifact mapping,
-**so that** I can provide comprehensive geographic and varietal information for coffee products following the established C.2 pattern without creating separate database operations.
+**I want** to extract Indian coffee varieties, regions, estates, states, and altitude from product descriptions to enhance the existing coffee artifact mapping,
+**so that** I can provide comprehensive geographic and varietal information for Indian coffee products following the established C.2 pattern without creating separate database operations.
 
 ## Acceptance Criteria
-1. Coffee varieties extracted from product descriptions into varieties array
-2. Geographic data extracted (region, country, altitude) from product descriptions
-3. Ambiguous cases flagged in `parsing_warnings` with confidence scoring
-4. Integration with A.1-A.5 pipeline through ValidatorIntegrationService composition
-5. Enhancement of `ArtifactMapper._map_artifact_data()` following C.2 pattern
-6. Use existing `rpc_upsert_coffee()` with existing `varieties` and geographic fields
-7. Comprehensive test coverage for variety and geographic extraction
-8. Performance optimized for batch processing of product data
+1. Indian coffee varieties extracted from product descriptions (S795, S9, S8, S5, Cauvery, Kent, SL28, SL34, Geisha, Monsoon Malabar, etc.)
+2. Indian geographic data extracted (regions, estates, states, altitude) from product descriptions
+3. Indian coffee estate recognition from seed data patterns
+4. Ambiguous cases flagged in `parsing_warnings` with confidence scoring
+5. Integration with A.1-A.5 pipeline through ValidatorIntegrationService composition
+6. Enhancement of `ArtifactMapper._map_artifact_data()` following C.2 pattern
+7. Use existing `rpc_upsert_coffee()` with existing `varieties` and geographic fields
+8. Comprehensive test coverage for Indian variety and geographic extraction
+9. Performance optimized for batch processing of Indian coffee product data
 
 ## Tasks / Subtasks
-- [ ] Task 1: Variety extraction service implementation (AC: 1, 3, 7, 8)
+- [ ] Task 1: Indian variety extraction service implementation (AC: 1, 4, 8, 9)
   - [ ] Create `VarietyExtractionService` with Pydantic result models
-  - [ ] Implement variety detection from product descriptions
+  - [ ] Implement Indian variety detection (S795, S9, S8, S5, Cauvery, Kent, SL28, SL34, Geisha, Monsoon Malabar)
   - [ ] Add confidence scoring for variety extraction accuracy
   - [ ] Create batch processing optimization for multiple products
   - [ ] Add comprehensive error handling and logging
-  - [ ] Create unit tests for variety extraction accuracy
+  - [ ] Create unit tests for Indian variety extraction accuracy
   - [ ] Add performance tests for batch processing scenarios
 
-- [ ] Task 2: Geographic parser service implementation (AC: 2, 3, 7, 8)
+- [ ] Task 2: Indian geographic parser service implementation (AC: 2, 3, 4, 8, 9)
   - [ ] Create `GeographicParserService` with Pydantic result models
-  - [ ] Implement region/country detection from descriptions
+  - [ ] Implement Indian region/state/country detection from descriptions
+  - [ ] Implement Indian coffee estate recognition from seed data patterns
   - [ ] Implement altitude extraction from descriptions
   - [ ] Add confidence scoring for geographic extraction accuracy
   - [ ] Create batch processing optimization for multiple products
   - [ ] Add comprehensive error handling and logging
-  - [ ] Create unit tests for geographic extraction accuracy
+  - [ ] Create unit tests for Indian geographic extraction accuracy
   - [ ] Add performance tests for batch processing scenarios
 
 - [ ] Task 3: ValidatorIntegrationService composition (AC: 4, 5)
@@ -63,23 +65,38 @@ Draft
 - No additional database migrations needed for this story
 
 ### Variety Extraction Strategy
-[Source: Epic C requirements]
+[Source: Epic C requirements and Indian coffee seed data analysis]
 
-**Variety Detection:**
+**Indian Coffee Variety Detection:**
 ```python
 class VarietyExtractionService:
     def __init__(self, config: VarietyConfig):
         self.config = config
+        # Indian-specific variety patterns based on seed data analysis
         self.variety_patterns = {
-            'bourbon': [r'bourbon', r'bourbon\s*variety'],
-            'typica': [r'typica', r'typica\s*variety'],
-            'caturra': [r'caturra', r'caturra\s*variety'],
-            'catimor': [r'catimor', r'catimor\s*variety'],
+            # Traditional Indian varieties
+            's795': [r's795', r's\s*795', r'selection\s*795'],
+            's9': [r's9', r's\s*9', r'selection\s*9'],
+            's8': [r's8', r's\s*8', r'selection\s*8'],
+            's5': [r's5', r's\s*5', r'selection\s*5'],
+            's5a': [r's5a', r's\s*5a', r'selection\s*5a'],
+            's5b': [r's5b', r's\s*5b', r'selection\s*5b'],
+            'cauvery': [r'cauvery', r'cauvery\s*variety'],
+            'cxr': [r'cxr', r'cxr\s*variety'],
+            'chandagiri': [r'chandagiri', r'chandagiri\s*variety'],
             'kent': [r'kent', r'kent\s*variety'],
             'sl28': [r'sl28', r'sl\s*28'],
             'sl34': [r'sl34', r'sl\s*34'],
-            'geisha': [r'geisha', r'gesha', r'geisha\s*variety'],
-            'pacamara': [r'pacamara', r'pacamara\s*variety']
+            'catimor': [r'catimor', r'catimor\s*variety'],
+            'caturra': [r'caturra', r'caturra\s*variety'],
+            'bourbon': [r'bourbon', r'bourbon\s*variety'],
+            'typica': [r'typica', r'typica\s*variety'],
+            # Premium varieties found in Indian estates
+            'geisha': [r'geisha', r'gesha', r'geisha\s*variety', r'green\s*tip\s*gesha', r'brown\s*tip\s*gesha'],
+            'pacamara': [r'pacamara', r'pacamara\s*variety'],
+            # Indian processing-specific varieties
+            'monsoon_malabar': [r'monsoon\s*malabar', r'monsooned\s*malabar'],
+            'malabar': [r'malabar', r'malabar\s*variety']
         }
     
     def extract_varieties(self, description: str) -> VarietyResult:
@@ -103,26 +120,74 @@ class VarietyExtractionService:
 ```
 
 ### Geographic Parser Strategy
-[Source: Epic C requirements]
+[Source: Epic C requirements and Indian coffee regions seed data]
 
-**Geographic Data Extraction:**
+**Indian Coffee Geographic Data Extraction:**
 ```python
 class GeographicParserService:
     def __init__(self, config: GeographicConfig):
         self.config = config
+        # Indian coffee regions based on seed data analysis
         self.region_patterns = {
-            'africa': [r'africa', r'african', r'ethiopia', r'kenya', r'tanzania'],
-            'central_america': [r'central\s*america', r'guatemala', r'costa\s*rica', r'panama'],
-            'south_america': [r'south\s*america', r'colombia', r'brazil', r'peru'],
-            'asia': [r'asia', r'asian', r'india', r'indonesia', r'vietnam']
+            # Major Indian coffee regions
+            'chikmagalur': [r'chikmagalur', r'chikmagalur\s*region', r'baba\s*budangiri', r'baba\s*budan\s*giri'],
+            'coorg': [r'coorg', r'kodagu', r'coorg\s*region'],
+            'nilgiris': [r'nilgiris', r'blue\s*mountains', r'nilgiri\s*hills'],
+            'yercaud': [r'yercaud', r'shevaroy\s*hills', r'shevaroy'],
+            'wayanad': [r'wayanad', r'wayanad\s*highlands'],
+            'araku_valley': [r'araku\s*valley', r'araku'],
+            'biligiri_ranga': [r'biligiri\s*ranga', r'biligiriranga', r'br\s*hills'],
+            'malnad': [r'malnad', r'land\s*of\s*hills'],
+            'pulneys': [r'pulneys', r'pulney\s*hills', r'palani\s*hills'],
+            'anamalais': [r'anamalais', r'elephant\s*hills'],
+            'kodaikanal': [r'kodaikanal', r'kodaikanal\s*hills'],
+            'travancore': [r'travancore'],
+            'coimbatore': [r'coimbatore'],
+            'salem': [r'salem'],
+            'theni': [r'theni'],
+            'idukki': [r'idukki'],
+            'manjarabad': [r'manjarabad'],
+            'sakleshpur': [r'sakleshpur'],
+            # Northeast Indian regions
+            'arunachal_pradesh': [r'arunachal\s*pradesh', r'arunachal'],
+            'meghalaya': [r'meghalaya', r'abode\s*of\s*clouds'],
+            'mizoram': [r'mizoram'],
+            'manipur': [r'manipur'],
+            'tripura': [r'tripura'],
+            'nagaland': [r'nagaland', r'kohima'],
+            # Eastern Indian regions
+            'odisha': [r'odisha', r'orissa', r'koraput', r'rayagada', r'mayurbhanj', r'keonjhar'],
+            'andhra_pradesh': [r'andhra\s*pradesh', r'andhra'],
+            # International regions (for context)
+            'colombia': [r'colombia', r'colombian'],
+            'ethiopia': [r'ethiopia', r'ethiopian'],
+            'kenya': [r'kenya', r'kenyan']
         }
+        
+        # Indian states and countries
         self.country_patterns = {
+            'india': [r'india', r'indian', r'from\s*india'],
+            'colombia': [r'colombia', r'colombian'],
             'ethiopia': [r'ethiopia', r'ethiopian'],
             'kenya': [r'kenya', r'kenyan'],
-            'colombia': [r'colombia', r'colombian'],
             'brazil': [r'brazil', r'brazilian'],
-            'guatemala': [r'guatemala', r'guatemalan'],
-            'india': [r'india', r'indian']
+            'guatemala': [r'guatemala', r'guatemalan']
+        }
+        
+        # Indian states
+        self.state_patterns = {
+            'karnataka': [r'karnataka', r'karnataka\s*state'],
+            'tamil_nadu': [r'tamil\s*nadu', r'tamil\s*nadu\s*state'],
+            'kerala': [r'kerala', r'kerala\s*state'],
+            'andhra_pradesh': [r'andhra\s*pradesh', r'andhra\s*pradesh\s*state'],
+            'odisha': [r'odisha', r'orissa', r'odisha\s*state'],
+            'arunachal_pradesh': [r'arunachal\s*pradesh', r'arunachal\s*pradesh\s*state'],
+            'meghalaya': [r'meghalaya', r'meghalaya\s*state'],
+            'mizoram': [r'mizoram', r'mizoram\s*state'],
+            'manipur': [r'manipur', r'manipur\s*state'],
+            'tripura': [r'tripura', r'tripura\s*state'],
+            'nagaland': [r'nagaland', r'nagaland\s*state'],
+            'assam': [r'assam', r'assam\s*state']
         }
         self.altitude_patterns = [
             r'(\d+)\s*(?:m|meters?|ft|feet?)\s*(?:above\s*sea\s*level|asl)',
@@ -131,21 +196,23 @@ class GeographicParserService:
         ]
     
     def parse_geographic(self, description: str) -> GeographicResult:
-        """Parse geographic data from product description"""
+        """Parse Indian coffee geographic data from product description"""
         region = self._extract_region(description)
         country = self._extract_country(description)
+        state = self._extract_state(description)
         altitude = self._extract_altitude(description)
         
         return GeographicResult(
             region=region,
             country=country,
+            state=state,
             altitude=altitude,
-            confidence=self._calculate_confidence(region, country, altitude),
-            warnings=self._generate_warnings(region, country, altitude)
+            confidence=self._calculate_confidence(region, country, state, altitude),
+            warnings=self._generate_warnings(region, country, state, altitude)
         )
     
     def _extract_region(self, description: str) -> str:
-        """Extract region from description"""
+        """Extract Indian coffee region from description"""
         for region, patterns in self.region_patterns.items():
             for pattern in patterns:
                 if re.search(pattern, description, re.IGNORECASE):
@@ -153,11 +220,19 @@ class GeographicParserService:
         return 'unknown'
     
     def _extract_country(self, description: str) -> str:
-        """Extract country from description"""
+        """Extract country from description (India-focused)"""
         for country, patterns in self.country_patterns.items():
             for pattern in patterns:
                 if re.search(pattern, description, re.IGNORECASE):
                     return country
+        return 'unknown'
+    
+    def _extract_state(self, description: str) -> str:
+        """Extract Indian state from description"""
+        for state, patterns in self.state_patterns.items():
+            for pattern in patterns:
+                if re.search(pattern, description, re.IGNORECASE):
+                    return state
         return 'unknown'
     
     def _extract_altitude(self, description: str) -> Optional[int]:
@@ -171,6 +246,64 @@ class GeographicParserService:
                     altitude = int(altitude * 0.3048)  # Convert feet to meters
                 return altitude
         return None
+```
+
+### Indian Coffee Estate Patterns
+[Source: Indian coffee estates seed data analysis]
+
+**Estate Name Recognition:**
+```python
+# Indian coffee estate patterns from seed data
+self.estate_patterns = {
+    # Chikmagalur estates
+    'krishnagiri_estate': [r'krishnagiri\s*estate', r'krishnagiri'],
+    'kerehaklu_estate': [r'kerehaklu\s*estate', r'kerehaklu'],
+    'basankhan_estate': [r'basankhan\s*estate', r'basankhan'],
+    'thogarihunkal_estate': [r'thogarihunkal\s*estate', r'thogarihunkal'],
+    'baarbara_estate': [r'baarbara\s*estate', r'baarbara'],
+    'kalledevarapura_estate': [r'kalledevarapura\s*estate', r'kalledevarapura'],
+    'hoysala_estate': [r'hoysala\s*estate', r'hoysala'],
+    'sandalwood_estate': [r'sandalwood\s*estate', r'sandalwood'],
+    'st_joseph_estate': [r'st\s*joseph\s*estate', r'st\s*margaret\s*estate'],
+    'thippanahalli_estate': [r'thippanahalli\s*estate', r'thippanahalli'],
+    'kolli_berri_estate': [r'kolli\s*berri\s*estate', r'kolli\s*berri'],
+    'kondadkan_estate': [r'kondadkan\s*estate', r'kondadkan'],
+    'ratnagiri_estate': [r'ratnagiri\s*estate', r'ratnagiri'],
+    'gungegiri_estate': [r'gungegiri\s*estate', r'gungegiri'],
+    
+    # Coorg estates
+    'mercara_gold_estate': [r'mercara\s*gold\s*estate', r'mercara\s*gold'],
+    'old_kent_estates': [r'old\s*kent\s*estates', r'old\s*kent'],
+    
+    # Yercaud estates
+    'stanmore_estate': [r'stanmore\s*estate', r'stanmore'],
+    'hidden_falls_estate': [r'hidden\s*falls\s*estate', r'hidden\s*falls'],
+    'riverdale_estate': [r'riverdale\s*estate', r'riverdale'],
+    'gowri_estate': [r'gowri\s*estate', r'gowri'],
+    
+    # Biligiri-Ranga estates
+    'attikan_estate': [r'attikan\s*estate', r'attikan'],
+    'veer_attikan_estate': [r'veer\s*attikan\s*estate', r'veer\s*attikan'],
+    
+    # Other regions
+    'seethargundu_estate': [r'seethargundu\s*estate', r'seethargundu'],
+    'balmaadi_estate': [r'balmaadi\s*estate', r'balmaadi'],
+    'ananthagiri_plantations': [r'ananthagiri\s*plantations', r'ananthagiri'],
+    'cascara_coffee_cottages': [r'cascara\s*coffee\s*cottages', r'cascara'],
+    'dream_hill_coffee': [r'dream\s*hill\s*coffee', r'dream\s*hill'],
+    'hathikuli_estate': [r'hathikuli\s*estate', r'hathikuli'],
+    'jampui_hills': [r'jampui\s*hills', r'jampui'],
+    'darzo_village': [r'darzo\s*village', r'darzo'],
+    'mynriah_village': [r'mynriah\s*village', r'mynriah']
+}
+
+def _extract_estate(self, description: str) -> str:
+    """Extract Indian coffee estate from description"""
+    for estate, patterns in self.estate_patterns.items():
+        for pattern in patterns:
+            if re.search(pattern, description, re.IGNORECASE):
+                return estate
+    return 'unknown'
 ```
 
 ### Integration Points
@@ -227,6 +360,7 @@ class ArtifactMapper:
             )
             artifact['region'] = geo_result.region
             artifact['country'] = geo_result.country
+            artifact['state'] = geo_result.state
             artifact['altitude'] = geo_result.altitude
         
         return artifact
@@ -252,10 +386,62 @@ Based on Epic C requirements and A.1-A.5 integration:
 **Configuration Files:**
 - Variety processing config: `src/config/variety_config.py` (new)
 - Geographic processing config: `src/config/geographic_config.py` (new)
-- Test fixtures: `tests/parser/fixtures/variety_samples.json` (new)
-- Test fixtures: `tests/parser/fixtures/geographic_samples.json` (new)
+- Test fixtures: `tests/parser/fixtures/indian_variety_samples.json` (new)
+- Test fixtures: `tests/parser/fixtures/indian_geographic_samples.json` (new)
 - Documentation: `docs/parser/variety_extraction.md` (new)
 - Documentation: `docs/parser/geographic_parser.md` (new)
+
+**Indian Coffee Test Samples:**
+```json
+{
+  "variety_samples": [
+    {
+      "description": "Premium Selection 9 Arabica from Chikmagalur estate",
+      "expected_varieties": ["s9"],
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Monsoon Malabar coffee from Coorg region",
+      "expected_varieties": ["monsoon_malabar"],
+      "expected_region": "coorg"
+    },
+    {
+      "description": "Green Tip Gesha from Riverdale Estate, Yercaud",
+      "expected_varieties": ["geisha"],
+      "expected_region": "yercaud",
+      "expected_estate": "riverdale_estate"
+    },
+    {
+      "description": "S795 and Chandagiri varieties from Krishnagiri Estate at 1500m altitude",
+      "expected_varieties": ["s795", "chandagiri"],
+      "expected_region": "chikmagalur",
+      "expected_estate": "krishnagiri_estate",
+      "expected_altitude": 1500
+    }
+  ],
+  "geographic_samples": [
+    {
+      "description": "High-grown Arabica from Baba Budangiri hills in Karnataka",
+      "expected_region": "chikmagalur",
+      "expected_state": "karnataka",
+      "expected_country": "india"
+    },
+    {
+      "description": "Organic coffee from Araku Valley, Andhra Pradesh",
+      "expected_region": "araku_valley",
+      "expected_state": "andhra_pradesh",
+      "expected_country": "india"
+    },
+    {
+      "description": "Specialty coffee from Meghalaya at 1300m elevation",
+      "expected_region": "meghalaya",
+      "expected_state": "meghalaya",
+      "expected_country": "india",
+      "expected_altitude": 1300
+    }
+  ]
+}
+```
 
 ### Performance Requirements
 [Source: Epic C requirements]
@@ -295,3 +481,4 @@ Based on Epic C requirements and A.1-A.5 integration:
 | Date | Version | Description | Author |
 |------|---------|-------------|---------|
 | 2025-01-12 | 1.0 | Initial story creation with A.1-A.5 integration strategy | Bob (Scrum Master) |
+| 2025-01-25 | 1.1 | Enhanced for Indian coffee focus with seed data patterns | Winston (Architect) |

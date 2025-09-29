@@ -1,0 +1,129 @@
+{
+  "test_cases": [
+    {
+      "title": "100% Arabica Coffee",
+      "description": "Pure arabica beans from Ethiopia",
+      "expected_species": "arabica",
+      "expected_confidence": 0.9,
+      "test_type": "pure_species"
+    },
+    {
+      "title": "Robusta Coffee Beans",
+      "description": "100% robusta coffee from Vietnam",
+      "expected_species": "robusta",
+      "expected_confidence": 0.9,
+      "test_type": "pure_species"
+    },
+    {
+      "title": "Liberica Coffee",
+      "description": "Rare liberica beans from Philippines",
+      "expected_species": "liberica",
+      "expected_confidence": 0.9,
+      "test_type": "pure_species"
+    },
+    {
+      "title": "Coffee Blend",
+      "description": "80% arabica and 20% robusta blend",
+      "expected_species": "arabica_80_robusta_20",
+      "expected_confidence": 0.9,
+      "test_type": "ratio_blend"
+    },
+    {
+      "title": "Premium Blend",
+      "description": "70% arabica, 30% robusta coffee",
+      "expected_species": "arabica_70_robusta_30",
+      "expected_confidence": 0.9,
+      "test_type": "ratio_blend"
+    },
+    {
+      "title": "Chicory Coffee",
+      "description": "Arabica coffee with chicory",
+      "expected_species": "arabica_chicory",
+      "expected_confidence": 0.9,
+      "test_type": "chicory_mix"
+    },
+    {
+      "title": "Chicory Blend",
+      "description": "Robusta coffee with chicory",
+      "expected_species": "robusta_chicory",
+      "expected_confidence": 0.9,
+      "test_type": "chicory_mix"
+    },
+    {
+      "title": "Chicory Coffee Mix",
+      "description": "Coffee blend with chicory",
+      "expected_species": "blend_chicory",
+      "expected_confidence": 0.9,
+      "test_type": "chicory_mix"
+    },
+    {
+      "title": "South Indian Filter Coffee",
+      "description": "Traditional filter coffee mix",
+      "expected_species": "filter_coffee_mix",
+      "expected_confidence": 0.9,
+      "test_type": "filter_mix"
+    },
+    {
+      "title": "Coffee Blend",
+      "description": "Arabica and robusta blend",
+      "expected_species": "blend",
+      "expected_confidence": 0.9,
+      "test_type": "generic_blend"
+    },
+    {
+      "title": "Coffee Beans",
+      "description": "Premium coffee beans",
+      "expected_species": "unknown",
+      "expected_confidence": 0.0,
+      "test_type": "unknown"
+    },
+    {
+      "title": "",
+      "description": "",
+      "expected_species": "unknown",
+      "expected_confidence": 0.0,
+      "test_type": "empty"
+    }
+  ],
+  "batch_test_cases": [
+    {
+      "products": [
+        {"title": "100% Arabica", "description": "Pure arabica beans"},
+        {"title": "Robusta Coffee", "description": "Strong robusta beans"},
+        {"title": "Coffee Blend", "description": "Mixed coffee blend"},
+        {"title": "Unknown Coffee", "description": "Premium coffee"}
+      ],
+      "expected_results": [
+        {"species": "arabica", "confidence": 0.9},
+        {"species": "robusta", "confidence": 0.9},
+        {"species": "blend", "confidence": 0.9},
+        {"species": "unknown", "confidence": 0.0}
+      ]
+    }
+  ],
+  "performance_test_cases": [
+    {
+      "description": "Large batch processing",
+      "product_count": 1000,
+      "expected_processing_time_seconds": 2.0,
+      "expected_memory_usage_mb": 100
+    }
+  ],
+  "error_test_cases": [
+    {
+      "title": null,
+      "description": null,
+      "expected_species": "unknown",
+      "expected_source": "error",
+      "test_type": "null_inputs"
+    },
+    {
+      "title": "Coffee with special characters !@#$%",
+      "description": "Coffee with unicode: café, café",
+      "expected_species": "unknown",
+      "expected_confidence": 0.0,
+      "test_type": "special_characters"
+    }
+  ]
+}
+

@@ -1,0 +1,60 @@
+[1mdiff --git a/src/validator/artifact_mapper.py b/src/validator/artifact_mapper.py[m
+[1mindex 3f2779c..b104699 100644[m
+[1m--- a/src/validator/artifact_mapper.py[m
+[1m+++ b/src/validator/artifact_mapper.py[m
+[36m@@ -82,6 +82,9 @@[m [mclass ArtifactMapper:[m
+             'mapping_errors': 0[m
+         }[m
+         [m
+[32m+[m[32m        # Store integration service for access to all services[m
+[32m+[m[32m        self.integration_service = integration_service[m
+[32m+[m[41m        [m
+         # Initialize weight parser for enhanced weight parsing[m
+         if integration_service:[m
+             # Use weight parser from integration service[m
+[36m@@ -246,7 +249,7 @@[m [mclass ArtifactMapper:[m
+         [m
+         # Map required fields[m
+         coffee_payload = {[m
+[31m-            'p_bean_species': self._map_bean_species(normalization),[m
+[32m+[m[32m            'p_bean_species': self._map_bean_species(normalization, product),[m
+             'p_name': self._map_coffee_name(product, normalization),[m
+             'p_slug': self._map_coffee_slug(product),[m
+             'p_roaster_id': roaster_id,[m
+[36m@@ -629,10 +632,34 @@[m [mclass ArtifactMapper:[m
+         [m
+         return images_payloads[m
+     [m
+[31m-    def _map_bean_species(self, normalization: Optional[NormalizationModel]) -> Optional[str]:[m
+[31m-        """Map bean species from normalization data."""[m
+[32m+[m[32m    def _map_bean_species(self, normalization: Optional[NormalizationModel], product: Optional[ProductModel] = None) -> Optional[str]:[m
+[32m+[m[32m        """Map bean species from normalization data or parse from product content."""[m
+[32m+[m[32m        # First check if species is already in normalization data[m
+         if normalization and normalization.bean_species:[m
+             return normalization.bean_species.value[m
+[32m+[m[41m        [m
+[32m+[m[32m        # If not found and species parser is available, try parsing from product content[m
+[32m+[m[32m        if (self.integration_service and[m[41m [m
+[32m+[m[32m            self.integration_service.species_parser and[m[41m [m
+[32m+[m[32m            product):[m
+[32m+[m[32m            try:[m
+[32m+[m[32m                species_result = self.integration_service.species_parser.parse_species([m
+[32m+[m[32m                    title=product.title,[m
+[32m+[m[32m                    description=product.description or ''[m
+[32m+[m[32m                )[m
+[32m+[m[41m                [m
+[32m+[m[32m                # Only use parsed species if confidence is above threshold[m
+[32m+[m[32m                if (species_result.species != 'unknown' and[m[41m [m
+[32m+[m[32m                    species_result.confidence >= self.integration_service.species_parser.config.confidence_threshold):[m
+[32m+[m[32m                    return species_result.species[m
+[32m+[m[41m                    [m
+[32m+[m[32m            except Exception as e:[m
+[32m+[m[32m                logger.warning([m
+[32m+[m[32m                    "Species parsing failed during mapping",[m
+[32m+[m[32m                    product_title=product.title,[m
+[32m+[m[32m                    error=str(e)[m
+[32m+[m[32m                )[m
+[32m+[m[41m        [m
+         return None  # Return None when not defined[m
+     [m
+     def _map_coffee_name(self, product: ProductModel, normalization: Optional[NormalizationModel]) -> str:[m

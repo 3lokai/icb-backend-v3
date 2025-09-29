@@ -24,8 +24,10 @@ from ..images.imagekit_integration import ImageKitIntegrationService
 from ..parser.weight_parser import WeightParser
 from ..parser.roast_parser import RoastLevelParser
 from ..parser.process_parser import ProcessMethodParser
+from ..parser.grind_brewing_parser import GrindBrewingParser
 from ..parser.tag_normalization import TagNormalizationService
 from ..parser.notes_extraction import NotesExtractionService
+from ..parser.species_parser import BeanSpeciesParserService
 
 logger = get_logger(__name__)
 
@@ -106,6 +108,12 @@ class ValidatorIntegrationService:
         else:
             self.process_parser = None
         
+        # Initialize grind/brewing parser service
+        if self.config.enable_grind_brewing_parsing:
+            self.grind_brewing_parser = GrindBrewingParser()
+        else:
+            self.grind_brewing_parser = None
+        
         # Initialize tag normalization service
         if self.config.enable_tag_normalization:
             self.tag_normalization_service = TagNormalizationService()
@@ -117,6 +125,12 @@ class ValidatorIntegrationService:
             self.notes_extraction_service = NotesExtractionService()
         else:
             self.notes_extraction_service = None
+        
+        # Initialize species parser service
+        if self.config.enable_species_parsing:
+            self.species_parser = BeanSpeciesParserService(self.config.species_config)
+        else:
+            self.species_parser = None
         
         # Initialize artifact mapper after image services
         self.artifact_mapper = ArtifactMapper(integration_service=self)

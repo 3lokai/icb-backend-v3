@@ -1,0 +1,9 @@
+{
+  "artifact_id": "test-artifact-2",
+  "validated_at": "2025-09-29T20:13:27.938554+00:00",
+  "validation_errors": [
+    "Validation error"
+  ],
+  "validation_warnings": [],
+  "artifact_data": {}
+}

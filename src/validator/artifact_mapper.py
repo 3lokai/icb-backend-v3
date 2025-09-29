@@ -25,6 +25,13 @@ except ImportError:
     RoastLevelParser = None
     ProcessMethodParser = None
 
+# Import grind/brewing parser for enhanced grind parsing
+try:
+    from ..parser.grind_brewing_parser import GrindBrewingParser
+except ImportError:
+    # Fallback for when grind/brewing parser is not available
+    GrindBrewingParser = None
+
 # Import image deduplication service
 try:
     from ..images.deduplication_service import ImageDeduplicationService
@@ -82,8 +89,11 @@ class ArtifactMapper:
             'mapping_errors': 0
         }
         
+        # Store integration service for access to all services
+        self.integration_service = integration_service
+        
         # Initialize weight parser for enhanced weight parsing
-        if integration_service:
+        if integration_service and hasattr(integration_service, 'weight_parser'):
             # Use weight parser from integration service
             self.weight_parser = integration_service.weight_parser
         else:
@@ -94,17 +104,25 @@ class ArtifactMapper:
         self.roast_parser = RoastLevelParser() if RoastLevelParser else None
         self.process_parser = ProcessMethodParser() if ProcessMethodParser else None
         
+        # Initialize grind/brewing parser for enhanced grind parsing
+        if integration_service and hasattr(integration_service, 'grind_brewing_parser'):
+            # Use grind/brewing parser from integration service
+            self.grind_brewing_parser = integration_service.grind_brewing_parser
+        else:
+            # Fallback to individual initialization (legacy support)
+            self.grind_brewing_parser = GrindBrewingParser() if GrindBrewingParser else None
+        
         # Initialize parser services from integration service
         if integration_service:
             # Store individual parser services for direct access
-            self.tag_normalization_service = integration_service.tag_normalization_service
-            self.notes_extraction_service = integration_service.notes_extraction_service
+            self.tag_normalization_service = getattr(integration_service, 'tag_normalization_service', None)
+            self.notes_extraction_service = getattr(integration_service, 'notes_extraction_service', None)
             
             # Use services from integration service
-            self.deduplication_service = integration_service.image_deduplication_service
-            self.imagekit_integration = integration_service.imagekit_integration
-            self.enable_image_deduplication = integration_service.config.enable_image_deduplication
-            self.enable_imagekit = integration_service.config.enable_imagekit_upload
+            self.deduplication_service = getattr(integration_service, 'image_deduplication_service', None)
+            self.imagekit_integration = getattr(integration_service, 'imagekit_integration', None)
+            self.enable_image_deduplication = getattr(integration_service.config, 'enable_image_deduplication', False)
+            self.enable_imagekit = getattr(integration_service.config, 'enable_imagekit_upload', False)
         else:
             # Initialize parser services as None when no integration service
             self.tag_normalization_service = None
@@ -246,7 +264,7 @@ class ArtifactMapper:
         
         # Map required fields
         coffee_payload = {
-            'p_bean_species': self._map_bean_species(normalization),
+            'p_bean_species': self._map_bean_species(normalization, product),
             'p_name': self._map_coffee_name(product, normalization),
             'p_slug': self._map_coffee_slug(product),
             'p_roaster_id': roaster_id,
@@ -292,7 +310,91 @@ class ArtifactMapper:
         
         self.mapping_stats['coffee_mapped'] += 1
         
+        # Map default grind from variant grind data
+        default_grind = self._determine_default_grind(artifact.product.variants)
+        if default_grind:
+            coffee_payload['p_default_grind'] = default_grind
+        
         return coffee_payload
+    
+    def _determine_default_grind(self, variants: List[VariantModel]) -> Optional[str]:
+        """
+        Determine the default grind for a coffee from its variants.
+        
+        Uses heuristics:
+        1. If any variant is "whole bean", use that (highest priority)
+        2. Otherwise, use the most common grind type
+        3. If tied, prefer more specific grinds over generic ones
+        
+        Args:
+            variants: List of product variants
+            
+        Returns:
+            Default grind type or None if no grind data available
+        """
+        if not self.grind_brewing_parser or not variants:
+            return None
+        
+        grind_counts = {}
+        grind_confidence = {}
+        
+        # Parse grind types from all variants
+        for variant in variants:
+            try:
+                # Convert variant to dict format for parser
+                variant_dict = {
+                    'title': variant.title or '',
+                    'options': variant.options or [],
+                    'attributes': getattr(variant, 'attributes', [])
+                }
+                
+                grind_result = self.grind_brewing_parser.parse_grind_brewing(variant_dict)
+                
+                if grind_result.grind_type != 'unknown' and grind_result.confidence > 0.5:
+                    grind_type = grind_result.grind_type
+                    
+                    # Count occurrences
+                    grind_counts[grind_type] = grind_counts.get(grind_type, 0) + 1
+                    
+                    # Track confidence (use highest confidence for each type)
+                    if grind_type not in grind_confidence or grind_result.confidence > grind_confidence[grind_type]:
+                        grind_confidence[grind_type] = grind_result.confidence
+                        
+            except Exception as e:
+                logger.warning(
+                    "Failed to parse grind for default determination",
+                    platform_variant_id=variant.platform_variant_id,
+                    error=str(e)
+                )
+                continue
+        
+        if not grind_counts:
+            return None
+        
+        # Priority 1: If "whole" bean is available, use it (highest priority)
+        if 'whole' in grind_counts:
+            return 'whole'
+        
+        # Priority 2: Find the most common grind type
+        max_count = max(grind_counts.values())
+        most_common_grinds = [grind for grind, count in grind_counts.items() if count == max_count]
+        
+        if len(most_common_grinds) == 1:
+            return most_common_grinds[0]
+        
+        # Priority 3: If tied, prefer more specific grinds over generic ones
+        # Order of preference (more specific to less specific)
+        preference_order = [
+            'south_indian_filter', 'turkish', 'cold_brew', 'aeropress', 'moka_pot',
+            'french_press', 'pour_over', 'syphon', 'espresso', 'filter', 'omni'
+        ]
+        
+        for preferred_grind in preference_order:
+            if preferred_grind in most_common_grinds:
+                return preferred_grind
+        
+        # Fallback: return the first most common grind
+        return most_common_grinds[0]
     
     def _map_variants_data(self, artifact: ArtifactModel, metadata_only: bool) -> List[Dict[str, Any]]:
         """
@@ -322,10 +424,42 @@ class ArtifactMapper:
                 if variant.compare_at_price_decimal is not None:
                     variant_payload['p_compare_at_price'] = variant.compare_at_price_decimal
                 
-                # Map grind type from variant options
-                grind = self._map_grind_from_options(variant.options)
-                if grind:
-                    variant_payload['p_grind'] = grind
+                # Map grind type using enhanced grind/brewing parser
+                if self.grind_brewing_parser:
+                    try:
+                        # Convert variant to dict format for parser
+                        variant_dict = {
+                            'title': variant.title or '',
+                            'options': variant.options or [],
+                            'attributes': getattr(variant, 'attributes', [])
+                        }
+                        
+                        grind_result = self.grind_brewing_parser.parse_grind_brewing(variant_dict)
+                        
+                        if grind_result.grind_type != 'unknown':
+                            variant_payload['p_grind'] = grind_result.grind_type
+                            
+                            # Add parsing metadata to source_raw
+                            if 'p_source_raw' not in variant_payload:
+                                variant_payload['p_source_raw'] = {}
+                            
+                            variant_payload['p_source_raw']['grind_brewing_parsing'] = grind_result.to_dict()
+                            
+                            # Log parsing warnings if any
+                            if grind_result.warnings:
+                                logger.warning(
+                                    "Grind/brewing parsing warnings",
+                                    platform_variant_id=variant.platform_variant_id,
+                                    warnings=grind_result.warnings,
+                                    grind_type=grind_result.grind_type,
+                                    confidence=grind_result.confidence
+                                )
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to parse grind/brewing for variant",
+                            platform_variant_id=variant.platform_variant_id,
+                            error=str(e)
+                        )
                 
                 # Map pack count from weight
                 pack_count = self._map_pack_count(variant)
@@ -629,10 +763,34 @@ class ArtifactMapper:
         
         return images_payloads
     
-    def _map_bean_species(self, normalization: Optional[NormalizationModel]) -> Optional[str]:
-        """Map bean species from normalization data."""
+    def _map_bean_species(self, normalization: Optional[NormalizationModel], product: Optional[ProductModel] = None) -> Optional[str]:
+        """Map bean species from normalization data or parse from product content."""
+        # First check if species is already in normalization data
         if normalization and normalization.bean_species:
             return normalization.bean_species.value
+        
+        # If not found and species parser is available, try parsing from product content
+        if (self.integration_service and 
+            self.integration_service.species_parser and 
+            product):
+            try:
+                species_result = self.integration_service.species_parser.parse_species(
+                    title=product.title,
+                    description=product.description or ''
+                )
+                
+                # Only use parsed species if confidence is above threshold
+                if (species_result.species != 'unknown' and 
+                    species_result.confidence >= self.integration_service.species_parser.config.confidence_threshold):
+                    return species_result.species
+                    
+            except Exception as e:
+                logger.warning(
+                    "Species parsing failed during mapping",
+                    product_title=product.title,
+                    error=str(e)
+                )
+        
         return None  # Return None when not defined
     
     def _map_coffee_name(self, product: ProductModel, normalization: Optional[NormalizationModel]) -> str:
