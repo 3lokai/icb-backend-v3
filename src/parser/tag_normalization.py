@@ -282,5 +282,8 @@ class TagNormalizationService:
             'service_version': '1.0.0',
             'category_mapping': len(self.category_mapping),
             'fuzzy_matching': len(self.fuzzy_patterns),
-            'supported_categories': len(self.category_mapping)
+            'supported_categories': len(self.category_mapping),
+            'categories': list(self.category_mapping.keys()),
+            'total_tags': sum(len(tags) for tags in self.category_mapping.values()),
+            'fuzzy_patterns': len(self.fuzzy_patterns)
         }

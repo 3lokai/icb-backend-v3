@@ -9,6 +9,10 @@ from .imagekit_config import ImageKitConfig
 from .tag_config import TagConfig
 from .notes_config import NotesConfig
 from .species_config import SpeciesConfig
+from .variety_config import VarietyConfig
+from .geographic_config import GeographicConfig
+from .sensory_config import SensoryConfig
+from .hash_config import HashConfig
 
 
 class ValidatorConfig(BaseModel):
@@ -46,6 +50,18 @@ class ValidatorConfig(BaseModel):
     # Species parser configuration
     enable_species_parsing: bool = Field(default=True, description="Enable species parsing")
     species_config: Optional[SpeciesConfig] = Field(default=None, description="Species parser configuration")
+    # Variety extraction configuration
+    enable_variety_parsing: bool = Field(default=True, description="Enable variety extraction")
+    variety_config: Optional[VarietyConfig] = Field(default=None, description="Variety extraction configuration")
+    # Geographic parser configuration
+    enable_geographic_parsing: bool = Field(default=True, description="Enable geographic parsing")
+    geographic_config: Optional[GeographicConfig] = Field(default=None, description="Geographic parser configuration")
+    # Sensory parser configuration
+    enable_sensory_parsing: bool = Field(default=True, description="Enable sensory parameter parsing")
+    sensory_config: Optional[SensoryConfig] = Field(default=None, description="Sensory parser configuration")
+    # Hash generation configuration
+    enable_hash_generation: bool = Field(default=True, description="Enable content hash generation")
+    hash_config: Optional[HashConfig] = Field(default=None, description="Hash generation configuration")
     
     @field_validator('storage_path', 'invalid_artifacts_path')
     @classmethod

@@ -451,5 +451,8 @@ class NotesExtractionService:
             'service_version': '1.0.0',
             'tasting_patterns': len(self.tasting_patterns),
             'context_patterns': len(self.context_patterns),
-            'tasting_keywords': len(self.tasting_keywords)
+            'tasting_keywords': len(self.tasting_keywords),
+            'high_confidence_patterns': len(self.high_confidence_patterns),
+            'medium_confidence_patterns': len(self.medium_confidence_patterns),
+            'low_confidence_patterns': len(self.low_confidence_patterns)
         }

@@ -28,6 +28,10 @@ from ..parser.grind_brewing_parser import GrindBrewingParser
 from ..parser.tag_normalization import TagNormalizationService
 from ..parser.notes_extraction import NotesExtractionService
 from ..parser.species_parser import BeanSpeciesParserService
+from ..parser.variety_extraction import VarietyExtractionService
+from ..parser.geographic_parser import GeographicParserService
+from ..parser.sensory_parser import SensoryParserService
+from ..parser.content_hash import ContentHashService
 
 logger = get_logger(__name__)
 
@@ -131,6 +135,30 @@ class ValidatorIntegrationService:
             self.species_parser = BeanSpeciesParserService(self.config.species_config)
         else:
             self.species_parser = None
+        
+        # Initialize variety extraction service
+        if self.config.enable_variety_parsing:
+            self.variety_parser = VarietyExtractionService(self.config.variety_config)
+        else:
+            self.variety_parser = None
+        
+        # Initialize geographic parser service
+        if self.config.enable_geographic_parsing:
+            self.geographic_parser = GeographicParserService(self.config.geographic_config)
+        else:
+            self.geographic_parser = None
+        
+        # Initialize sensory parser service
+        if self.config.enable_sensory_parsing:
+            self.sensory_parser = SensoryParserService(self.config.sensory_config)
+        else:
+            self.sensory_parser = None
+        
+        # Initialize hash generation service
+        if self.config.enable_hash_generation:
+            self.hash_service = ContentHashService(self.config.hash_config)
+        else:
+            self.hash_service = None
         
         # Initialize artifact mapper after image services
         self.artifact_mapper = ArtifactMapper(integration_service=self)

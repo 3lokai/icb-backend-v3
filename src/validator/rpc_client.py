@@ -253,7 +253,25 @@ class RPCClient:
         decaf: Optional[bool] = None,
         notes_raw: Optional[Dict[str, Any]] = None,
         source_raw: Optional[Dict[str, Any]] = None,
-        status: Optional[str] = None
+        status: Optional[str] = None,
+        # Epic C.3: Tags & Notes parameters
+        tags: Optional[List[str]] = None,
+        # Epic C.4: Grind & Species parameters
+        default_grind: Optional[str] = None,
+        # Epic C.5: Varieties & Geographic parameters
+        varieties: Optional[List[str]] = None,
+        region: Optional[str] = None,
+        country: Optional[str] = None,
+        altitude: Optional[int] = None,
+        # Epic C.6: Sensory & Hash parameters
+        acidity: Optional[float] = None,
+        body: Optional[float] = None,
+        flavors: Optional[List[str]] = None,
+        content_hash: Optional[str] = None,
+        raw_hash: Optional[str] = None,
+        # Epic C.7: Text Cleaning parameters
+        title_cleaned: Optional[str] = None,
+        description_cleaned: Optional[str] = None
     ) -> str:
         """
         Upsert coffee record using rpc_upsert_coffee.
@@ -303,6 +321,42 @@ class RPCClient:
             parameters['p_source_raw'] = source_raw
         if status is not None:
             parameters['p_status'] = status
+        
+        # Epic C.3: Tags & Notes parameters
+        if tags is not None:
+            parameters['p_tags'] = tags
+        
+        # Epic C.4: Grind & Species parameters
+        if default_grind is not None:
+            parameters['p_default_grind'] = default_grind
+        
+        # Epic C.5: Varieties & Geographic parameters
+        if varieties is not None:
+            parameters['p_varieties'] = varieties
+        if region is not None:
+            parameters['p_region'] = region
+        if country is not None:
+            parameters['p_country'] = country
+        if altitude is not None:
+            parameters['p_altitude'] = altitude
+        
+        # Epic C.6: Sensory & Hash parameters
+        if acidity is not None:
+            parameters['p_acidity'] = acidity
+        if body is not None:
+            parameters['p_body'] = body
+        if flavors is not None:
+            parameters['p_flavors'] = flavors
+        if content_hash is not None:
+            parameters['p_content_hash'] = content_hash
+        if raw_hash is not None:
+            parameters['p_raw_hash'] = raw_hash
+        
+        # Epic C.7: Text Cleaning parameters
+        if title_cleaned is not None:
+            parameters['p_title_cleaned'] = title_cleaned
+        if description_cleaned is not None:
+            parameters['p_description_cleaned'] = description_cleaned
         
         result = self._execute_rpc_with_retry(
             rpc_name='rpc_upsert_coffee',

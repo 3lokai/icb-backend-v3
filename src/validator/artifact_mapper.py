@@ -315,6 +315,41 @@ class ArtifactMapper:
         if default_grind:
             coffee_payload['p_default_grind'] = default_grind
         
+        # Map varieties using variety extraction service
+        if self.integration_service and self.integration_service.variety_parser:
+            varieties = self._extract_varieties_from_description(product)
+            if varieties:
+                coffee_payload['p_varieties'] = varieties
+        
+        # Map geographic data using geographic parser service
+        if self.integration_service and self.integration_service.geographic_parser:
+            geographic_data = self._extract_geographic_from_description(product)
+            if geographic_data:
+                if geographic_data.get('region'):
+                    coffee_payload['p_region'] = geographic_data['region']
+                if geographic_data.get('country'):
+                    coffee_payload['p_country'] = geographic_data['country']
+                if geographic_data.get('altitude'):
+                    coffee_payload['p_altitude'] = geographic_data['altitude']
+        
+        # Map sensory data using sensory parser service
+        if self.integration_service and self.integration_service.sensory_parser:
+            sensory_data = self._extract_sensory_from_description(product)
+            if sensory_data:
+                if sensory_data.get('acidity') is not None:
+                    coffee_payload['p_acidity'] = sensory_data['acidity']
+                if sensory_data.get('body') is not None:
+                    coffee_payload['p_body'] = sensory_data['body']
+        
+        # Map hash data using hash generation service
+        if self.integration_service and self.integration_service.hash_service:
+            hash_data = self._generate_hashes_for_artifact(artifact)
+            if hash_data:
+                if hash_data.get('content_hash'):
+                    coffee_payload['p_content_hash'] = hash_data['content_hash']
+                if hash_data.get('raw_hash'):
+                    coffee_payload['p_raw_hash'] = hash_data['raw_hash']
+        
         return coffee_payload
     
     def _determine_default_grind(self, variants: List[VariantModel]) -> Optional[str]:
@@ -1153,6 +1188,224 @@ class ArtifactMapper:
             logger.warning(
                 "Notes extraction failed",
                 product_id=product.platform_product_id,
+                error=str(e)
+            )
+            return None
+    
+    def _extract_varieties_from_description(self, product) -> Optional[List[str]]:
+        """
+        Extract coffee varieties from product description.
+        
+        Args:
+            product: Product model
+            
+        Returns:
+            List of extracted varieties or None if no varieties found
+        """
+        try:
+            if not self.integration_service or not self.integration_service.variety_parser:
+                return None
+            
+            # Combine all description sources
+            description_text = ""
+            
+            if product.description_html:
+                description_text += self._html_to_markdown(product.description_html)
+            
+            if product.description_md:
+                description_text += " " + product.description_md
+            
+            if not description_text.strip():
+                return None
+            
+            # Extract varieties using the service
+            result = self.integration_service.variety_parser.extract_varieties(description_text)
+            
+            logger.info(
+                "Variety extraction completed",
+                product_id=product.platform_product_id,
+                description_length=len(description_text),
+                varieties_found=len(result.varieties),
+                warnings_count=len(result.warnings)
+            )
+            
+            return result.varieties if result.varieties else None
+            
+        except Exception as e:
+            logger.warning(
+                "Variety extraction failed",
+                product_id=product.platform_product_id,
+                error=str(e)
+            )
+            return None
+    
+    def _extract_geographic_from_description(self, product) -> Optional[Dict[str, Any]]:
+        """
+        Extract geographic data from product description.
+        
+        Args:
+            product: Product model
+            
+        Returns:
+            Dictionary with geographic data or None if no geographic data found
+        """
+        try:
+            if not self.integration_service or not self.integration_service.geographic_parser:
+                return None
+            
+            # Combine all description sources
+            description_text = ""
+            
+            if product.description_html:
+                description_text += self._html_to_markdown(product.description_html)
+            
+            if product.description_md:
+                description_text += " " + product.description_md
+            
+            if not description_text.strip():
+                return None
+            
+            # Extract geographic data using the service
+            result = self.integration_service.geographic_parser.parse_geographic(description_text)
+            
+            logger.info(
+                "Geographic parsing completed",
+                product_id=product.platform_product_id,
+                description_length=len(description_text),
+                region=result.region,
+                country=result.country,
+                state=result.state,
+                estate=result.estate,
+                altitude=result.altitude,
+                confidence=result.confidence,
+                warnings_count=len(result.warnings)
+            )
+            
+            # Return only non-unknown values
+            geographic_data = {}
+            if result.region != 'unknown':
+                geographic_data['region'] = result.region
+            if result.country != 'unknown':
+                geographic_data['country'] = result.country
+            if result.state != 'unknown':
+                geographic_data['state'] = result.state
+            if result.estate != 'unknown':
+                geographic_data['estate'] = result.estate
+            if result.altitude is not None:
+                geographic_data['altitude'] = result.altitude
+            
+            return geographic_data if geographic_data else None
+            
+        except Exception as e:
+            logger.warning(
+                "Geographic parsing failed",
+                product_id=product.platform_product_id,
+                error=str(e)
+            )
+            return None
+    
+    def _extract_sensory_from_description(self, product: ProductModel) -> Optional[Dict[str, Any]]:
+        """
+        Extract sensory parameters from product description.
+        
+        Args:
+            product: Product model
+            
+        Returns:
+            Dictionary with sensory data or None if no data found
+        """
+        try:
+            if not self.integration_service or not self.integration_service.sensory_parser:
+                return None
+            
+            # Combine all description sources
+            description_text = ""
+            
+            if product.description_html:
+                description_text += self._html_to_markdown(product.description_html)
+            
+            if product.description_md:
+                description_text += " " + product.description_md
+            
+            if not description_text.strip():
+                return None
+            
+            # Parse sensory parameters
+            result = self.integration_service.sensory_parser.parse_sensory(description_text)
+            
+            logger.debug(
+                "Sensory parsing completed",
+                product_id=product.platform_product_id,
+                acidity=result.acidity,
+                body=result.body,
+                confidence=result.confidence
+            )
+            
+            # Return only non-None values
+            sensory_data = {}
+            if result.acidity is not None:
+                sensory_data['acidity'] = result.acidity
+            if result.body is not None:
+                sensory_data['body'] = result.body
+            
+            return sensory_data if sensory_data else None
+            
+        except Exception as e:
+            logger.warning(
+                "Sensory parsing failed",
+                product_id=product.platform_product_id,
+                error=str(e)
+            )
+            return None
+    
+    def _generate_hashes_for_artifact(self, artifact: ArtifactModel) -> Optional[Dict[str, str]]:
+        """
+        Generate content and raw hashes for artifact.
+        
+        Args:
+            artifact: Artifact model
+            
+        Returns:
+            Dictionary with hash data or None if generation failed
+        """
+        try:
+            if not self.integration_service or not self.integration_service.hash_service:
+                return None
+            
+            # Convert artifact to dictionary for hash generation
+            artifact_dict = {
+                'title': artifact.product.name,
+                'description': artifact.product.description_md or '',
+                'weight_g': getattr(artifact.normalization, 'weight_g', None) if artifact.normalization else None,
+                'roast_level': artifact.normalization.roast_level.value if artifact.normalization and artifact.normalization.roast_level else None,
+                'process': artifact.normalization.process.value if artifact.normalization and artifact.normalization.process else None,
+                'grind_type': getattr(artifact.normalization, 'grind_type', None) if artifact.normalization else None,
+                'species': artifact.normalization.bean_species.value if artifact.normalization and artifact.normalization.bean_species else None
+            }
+            
+            # Generate hashes
+            result = self.integration_service.hash_service.generate_hashes(artifact_dict)
+            
+            logger.debug(
+                "Hash generation completed",
+                product_id=artifact.product.platform_product_id,
+                content_hash=result.content_hash[:16] + "..." if result.content_hash else None,
+                raw_hash=result.raw_hash[:16] + "..." if result.raw_hash else None
+            )
+            
+            # Return hash data
+            hash_data = {}
+            if result.content_hash:
+                hash_data['content_hash'] = result.content_hash
+            if result.raw_hash:
+                hash_data['raw_hash'] = result.raw_hash
+            
+            return hash_data if hash_data else None
+            
+        except Exception as e:
+            logger.warning(
+                "Hash generation failed",
+                product_id=artifact.product.platform_product_id,
                 error=str(e)
             )
             return None

@@ -1,0 +1,447 @@
+{
+  "variety_samples": [
+    {
+      "description": "Premium Selection 9 Arabica from Chikmagalur estate",
+      "expected_varieties": ["s9"],
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Monsoon Malabar coffee from Coorg region",
+      "expected_varieties": ["monsoon_malabar"],
+      "expected_region": "coorg"
+    },
+    {
+      "description": "Green Tip Gesha from Riverdale Estate, Yercaud",
+      "expected_varieties": ["geisha"],
+      "expected_region": "yercaud",
+      "expected_estate": "riverdale_estate"
+    },
+    {
+      "description": "S795 and Chandagiri varieties from Krishnagiri Estate at 1500m altitude",
+      "expected_varieties": ["s795", "chandagiri"],
+      "expected_region": "chikmagalur",
+      "expected_estate": "krishnagiri_estate",
+      "expected_altitude": 1500
+    },
+    {
+      "description": "Selection 8 Arabica from Baba Budangiri hills",
+      "expected_varieties": ["s8"],
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Cauvery variety coffee from Nilgiris",
+      "expected_varieties": ["cauvery"],
+      "expected_region": "nilgiris"
+    },
+    {
+      "description": "Kent variety from Wayanad highlands",
+      "expected_varieties": ["kent"],
+      "expected_region": "wayanad"
+    },
+    {
+      "description": "SL28 and SL34 varieties from Coorg",
+      "expected_varieties": ["sl28", "sl34"],
+      "expected_region": "coorg"
+    },
+    {
+      "description": "Catimor and Caturra varieties from Araku Valley",
+      "expected_varieties": ["catimor", "caturra"],
+      "expected_region": "araku_valley"
+    },
+    {
+      "description": "Bourbon and Typica varieties from Biligiri Ranga hills",
+      "expected_varieties": ["bourbon", "typica"],
+      "expected_region": "biligiri_ranga"
+    },
+    {
+      "description": "Pacamara variety from Meghalaya",
+      "expected_varieties": ["pacamara"],
+      "expected_region": "meghalaya"
+    },
+    {
+      "description": "Malabar variety from Kerala",
+      "expected_varieties": ["malabar"],
+      "expected_region": "kerala"
+    },
+    {
+      "description": "S5A and S5B varieties from Pulney hills",
+      "expected_varieties": ["s5a", "s5b"],
+      "expected_region": "pulneys"
+    },
+    {
+      "description": "CXR variety from Anamalais",
+      "expected_varieties": ["cxr"],
+      "expected_region": "anamalais"
+    },
+    {
+      "description": "Brown Tip Gesha from Hidden Falls Estate",
+      "expected_varieties": ["geisha"],
+      "expected_region": "yercaud",
+      "expected_estate": "hidden_falls_estate"
+    }
+  ],
+  "geographic_samples": [
+    {
+      "description": "High-grown Arabica from Baba Budangiri hills in Karnataka",
+      "expected_region": "chikmagalur",
+      "expected_state": "karnataka",
+      "expected_country": "india"
+    },
+    {
+      "description": "Organic coffee from Araku Valley, Andhra Pradesh",
+      "expected_region": "araku_valley",
+      "expected_state": "andhra_pradesh",
+      "expected_country": "india"
+    },
+    {
+      "description": "Specialty coffee from Meghalaya at 1300m elevation",
+      "expected_region": "meghalaya",
+      "expected_state": "meghalaya",
+      "expected_country": "india",
+      "expected_altitude": 1300
+    },
+    {
+      "description": "Coffee from Coorg, Karnataka state",
+      "expected_region": "coorg",
+      "expected_state": "karnataka",
+      "expected_country": "india"
+    },
+    {
+      "description": "Nilgiris Blue Mountains coffee from Tamil Nadu",
+      "expected_region": "nilgiris",
+      "expected_state": "tamil_nadu",
+      "expected_country": "india"
+    },
+    {
+      "description": "Yercaud Shevaroy hills coffee",
+      "expected_region": "yercaud",
+      "expected_state": "tamil_nadu",
+      "expected_country": "india"
+    },
+    {
+      "description": "Wayanad highlands coffee from Kerala",
+      "expected_region": "wayanad",
+      "expected_state": "kerala",
+      "expected_country": "india"
+    },
+    {
+      "description": "Biligiri Ranga hills coffee from Karnataka",
+      "expected_region": "biligiri_ranga",
+      "expected_state": "karnataka",
+      "expected_country": "india"
+    },
+    {
+      "description": "Malnad land of hills coffee",
+      "expected_region": "malnad",
+      "expected_state": "karnataka",
+      "expected_country": "india"
+    },
+    {
+      "description": "Pulney hills coffee from Tamil Nadu",
+      "expected_region": "pulneys",
+      "expected_state": "tamil_nadu",
+      "expected_country": "india"
+    },
+    {
+      "description": "Anamalais elephant hills coffee",
+      "expected_region": "anamalais",
+      "expected_state": "tamil_nadu",
+      "expected_country": "india"
+    },
+    {
+      "description": "Kodaikanal hills coffee from Tamil Nadu",
+      "expected_region": "kodaikanal",
+      "expected_state": "tamil_nadu",
+      "expected_country": "india"
+    },
+    {
+      "description": "Travancore coffee from Kerala",
+      "expected_region": "travancore",
+      "expected_state": "kerala",
+      "expected_country": "india"
+    },
+    {
+      "description": "Coimbatore coffee from Tamil Nadu",
+      "expected_region": "coimbatore",
+      "expected_state": "tamil_nadu",
+      "expected_country": "india"
+    },
+    {
+      "description": "Salem coffee from Tamil Nadu",
+      "expected_region": "salem",
+      "expected_state": "tamil_nadu",
+      "expected_country": "india"
+    },
+    {
+      "description": "Theni coffee from Tamil Nadu",
+      "expected_region": "theni",
+      "expected_state": "tamil_nadu",
+      "expected_country": "india"
+    },
+    {
+      "description": "Idukki coffee from Kerala",
+      "expected_region": "idukki",
+      "expected_state": "kerala",
+      "expected_country": "india"
+    },
+    {
+      "description": "Manjarabad coffee from Karnataka",
+      "expected_region": "manjarabad",
+      "expected_state": "karnataka",
+      "expected_country": "india"
+    },
+    {
+      "description": "Sakleshpur coffee from Karnataka",
+      "expected_region": "sakleshpur",
+      "expected_state": "karnataka",
+      "expected_country": "india"
+    },
+    {
+      "description": "Arunachal Pradesh coffee from Northeast India",
+      "expected_region": "arunachal_pradesh",
+      "expected_state": "arunachal_pradesh",
+      "expected_country": "india"
+    },
+    {
+      "description": "Mizoram coffee from Northeast India",
+      "expected_region": "mizoram",
+      "expected_state": "mizoram",
+      "expected_country": "india"
+    },
+    {
+      "description": "Manipur coffee from Northeast India",
+      "expected_region": "manipur",
+      "expected_state": "manipur",
+      "expected_country": "india"
+    },
+    {
+      "description": "Tripura coffee from Northeast India",
+      "expected_region": "tripura",
+      "expected_state": "tripura",
+      "expected_country": "india"
+    },
+    {
+      "description": "Nagaland Kohima coffee from Northeast India",
+      "expected_region": "nagaland",
+      "expected_state": "nagaland",
+      "expected_country": "india"
+    },
+    {
+      "description": "Odisha Koraput coffee from Eastern India",
+      "expected_region": "odisha",
+      "expected_state": "odisha",
+      "expected_country": "india"
+    },
+    {
+      "description": "Andhra Pradesh coffee from Eastern India",
+      "expected_region": "andhra_pradesh",
+      "expected_state": "andhra_pradesh",
+      "expected_country": "india"
+    },
+    {
+      "description": "Assam coffee from Northeast India",
+      "expected_region": "assam",
+      "expected_state": "assam",
+      "expected_country": "india"
+    }
+  ],
+  "estate_samples": [
+    {
+      "description": "Krishnagiri Estate coffee from Chikmagalur",
+      "expected_estate": "krishnagiri_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Kerehaklu Estate coffee from Chikmagalur",
+      "expected_estate": "kerehaklu_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Basankhan Estate coffee from Chikmagalur",
+      "expected_estate": "basankhan_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Thogarihunkal Estate coffee from Chikmagalur",
+      "expected_estate": "thogarihunkal_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Baarbara Estate coffee from Chikmagalur",
+      "expected_estate": "baarbara_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Kalledevarapura Estate coffee from Chikmagalur",
+      "expected_estate": "kalledevarapura_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Hoysala Estate coffee from Chikmagalur",
+      "expected_estate": "hoysala_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Sandalwood Estate coffee from Chikmagalur",
+      "expected_estate": "sandalwood_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "St Joseph Estate coffee from Chikmagalur",
+      "expected_estate": "st_joseph_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Thippanahalli Estate coffee from Chikmagalur",
+      "expected_estate": "thippanahalli_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Kolli Berri Estate coffee from Chikmagalur",
+      "expected_estate": "kolli_berri_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Kondadkan Estate coffee from Chikmagalur",
+      "expected_estate": "kondadkan_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Ratnagiri Estate coffee from Chikmagalur",
+      "expected_estate": "ratnagiri_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Gungegiri Estate coffee from Chikmagalur",
+      "expected_estate": "gungegiri_estate",
+      "expected_region": "chikmagalur"
+    },
+    {
+      "description": "Mercara Gold Estate coffee from Coorg",
+      "expected_estate": "mercara_gold_estate",
+      "expected_region": "coorg"
+    },
+    {
+      "description": "Old Kent Estates coffee from Coorg",
+      "expected_estate": "old_kent_estates",
+      "expected_region": "coorg"
+    },
+    {
+      "description": "Stanmore Estate coffee from Yercaud",
+      "expected_estate": "stanmore_estate",
+      "expected_region": "yercaud"
+    },
+    {
+      "description": "Hidden Falls Estate coffee from Yercaud",
+      "expected_estate": "hidden_falls_estate",
+      "expected_region": "yercaud"
+    },
+    {
+      "description": "Riverdale Estate coffee from Yercaud",
+      "expected_estate": "riverdale_estate",
+      "expected_region": "yercaud"
+    },
+    {
+      "description": "Gowri Estate coffee from Yercaud",
+      "expected_estate": "gowri_estate",
+      "expected_region": "yercaud"
+    },
+    {
+      "description": "Attikan Estate coffee from Biligiri Ranga",
+      "expected_estate": "attikan_estate",
+      "expected_region": "biligiri_ranga"
+    },
+    {
+      "description": "Veer Attikan Estate coffee from Biligiri Ranga",
+      "expected_estate": "veer_attikan_estate",
+      "expected_region": "biligiri_ranga"
+    },
+    {
+      "description": "Seethargundu Estate coffee from Tamil Nadu",
+      "expected_estate": "seethargundu_estate",
+      "expected_region": "tamil_nadu"
+    },
+    {
+      "description": "Balmaadi Estate coffee from Tamil Nadu",
+      "expected_estate": "balmaadi_estate",
+      "expected_region": "tamil_nadu"
+    },
+    {
+      "description": "Ananthagiri Plantations coffee from Andhra Pradesh",
+      "expected_estate": "ananthagiri_plantations",
+      "expected_region": "andhra_pradesh"
+    },
+    {
+      "description": "Cascara Coffee Cottages coffee from Tamil Nadu",
+      "expected_estate": "cascara_coffee_cottages",
+      "expected_region": "tamil_nadu"
+    },
+    {
+      "description": "Dream Hill Coffee from Tamil Nadu",
+      "expected_estate": "dream_hill_coffee",
+      "expected_region": "tamil_nadu"
+    },
+    {
+      "description": "Hathikuli Estate coffee from Assam",
+      "expected_estate": "hathikuli_estate",
+      "expected_region": "assam"
+    },
+    {
+      "description": "Jampui Hills coffee from Tripura",
+      "expected_estate": "jampui_hills",
+      "expected_region": "tripura"
+    },
+    {
+      "description": "Darzo Village coffee from Nagaland",
+      "expected_estate": "darzo_village",
+      "expected_region": "nagaland"
+    },
+    {
+      "description": "Mynriah Village coffee from Meghalaya",
+      "expected_estate": "mynriah_village",
+      "expected_region": "meghalaya"
+    }
+  ],
+  "altitude_samples": [
+    {
+      "description": "Coffee grown at 1500m above sea level",
+      "expected_altitude": 1500
+    },
+    {
+      "description": "High-grown coffee at 1200m altitude",
+      "expected_altitude": 1200
+    },
+    {
+      "description": "Coffee from 1800m elevation",
+      "expected_altitude": 1800
+    },
+    {
+      "description": "Coffee grown at 5000ft above sea level",
+      "expected_altitude": 1524
+    },
+    {
+      "description": "Coffee from 4000ft altitude",
+      "expected_altitude": 1219
+    },
+    {
+      "description": "Coffee grown at 6000ft elevation",
+      "expected_altitude": 1828
+    },
+    {
+      "description": "Altitude: 1300m coffee from Chikmagalur",
+      "expected_altitude": 1300
+    },
+    {
+      "description": "Coffee grown at 2000m ASL",
+      "expected_altitude": 2000
+    },
+    {
+      "description": "Coffee from 1000m above sea level",
+      "expected_altitude": 1000
+    },
+    {
+      "description": "Coffee grown at 2500m altitude",
+      "expected_altitude": 2500
+    }
+  ]
+}

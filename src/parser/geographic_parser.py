@@ -78,6 +78,8 @@ class GeographicParserService:
             'salem': [r'salem'],
             'theni': [r'theni'],
             'idukki': [r'idukki'],
+            'kerala': [r'kerala'],
+            'assam': [r'assam'],
             'manjarabad': [r'manjarabad'],
             'sakleshpur': [r'sakleshpur'],
             # Northeast Indian regions
@@ -98,7 +100,7 @@ class GeographicParserService:
         
         # Indian states and countries
         self.country_patterns = {
-            'india': [r'india', r'indian', r'from\s*india'],
+            'india': [r'india', r'indian', r'from\s*india', r'karnataka', r'tamil\s*nadu', r'kerala', r'andhra\s*pradesh', r'meghalaya', r'mizoram', r'manipur', r'tripura', r'nagaland', r'arunachal\s*pradesh', r'odisha', r'assam'],
             'colombia': [r'colombia', r'colombian'],
             'ethiopia': [r'ethiopia', r'ethiopian'],
             'kenya': [r'kenya', r'kenyan'],
@@ -151,8 +153,8 @@ class GeographicParserService:
             'gowri_estate': [r'gowri\s*estate', r'gowri'],
             
             # Biligiri-Ranga estates
-            'attikan_estate': [r'attikan\s*estate', r'attikan'],
             'veer_attikan_estate': [r'veer\s*attikan\s*estate', r'veer\s*attikan'],
+            'attikan_estate': [r'attikan\s*estate', r'attikan'],
             
             # Other regions
             'seethargundu_estate': [r'seethargundu\s*estate', r'seethargundu'],
@@ -170,7 +172,9 @@ class GeographicParserService:
         self.altitude_patterns = [
             r'(\d+)\s*(?:m|meters?|ft|feet?)\s*(?:above\s*sea\s*level|asl)',
             r'(\d+)\s*(?:m|meters?|ft|feet?)\s*altitude',
-            r'altitude[:\s]*(\d+)\s*(?:m|meters?|ft|feet?)'
+            r'altitude[:\s]*(\d+)\s*(?:m|meters?|ft|feet?)',
+            r'at\s*(\d+)\s*(?:m|meters?|ft|feet?)',
+            r'(\d+)\s*(?:m|meters?|ft|feet?)\s*elevation'
         ]
         
         # Statistics tracking
@@ -214,6 +218,18 @@ class GeographicParserService:
             state = self._extract_state(description)
             estate = self._extract_estate(description)
             altitude = self._extract_altitude(description)
+            
+            # Infer state from region if not found explicitly
+            if state == 'unknown' and region != 'unknown':
+                state = self._infer_state_from_region(region)
+            
+            # Infer region from estate if not found explicitly
+            if region == 'unknown' and estate != 'unknown':
+                region = self._infer_region_from_estate(estate)
+            
+            # Infer country from state/region if not found explicitly
+            if country == 'unknown' and (state != 'unknown' or region != 'unknown'):
+                country = self._infer_country_from_state_region(state, region)
             
             # Calculate confidence based on extracted data
             confidence = self._calculate_confidence(region, country, state, estate, altitude)
@@ -366,6 +382,125 @@ class GeographicParserService:
                     altitude = int(altitude * 0.3048)  # Convert feet to meters
                 return altitude
         return None
+    
+    def _infer_state_from_region(self, region: str) -> str:
+        """Infer state from region based on Indian coffee geography."""
+        region_to_state = {
+            # Karnataka regions
+            'chikmagalur': 'karnataka',
+            'coorg': 'karnataka',
+            'malnad': 'karnataka',
+            'manjarabad': 'karnataka',
+            'sakleshpur': 'karnataka',
+            'biligiri_ranga': 'karnataka',
+            
+            # Tamil Nadu regions
+            'nilgiris': 'tamil_nadu',
+            'yercaud': 'tamil_nadu',
+            'pulneys': 'tamil_nadu',
+            'anamalais': 'tamil_nadu',
+            'kodaikanal': 'tamil_nadu',
+            'coimbatore': 'tamil_nadu',
+            'salem': 'tamil_nadu',
+            'theni': 'tamil_nadu',
+            
+            # Kerala regions
+            'wayanad': 'kerala',
+            'travancore': 'kerala',
+            'idukki': 'kerala',
+            'kerala': 'kerala',
+            
+            # Andhra Pradesh regions
+            'araku_valley': 'andhra_pradesh',
+            'andhra_pradesh': 'andhra_pradesh',
+            
+            # Northeast regions
+            'meghalaya': 'meghalaya',
+            'mizoram': 'mizoram',
+            'manipur': 'manipur',
+            'tripura': 'tripura',
+            'nagaland': 'nagaland',
+            'arunachal_pradesh': 'arunachal_pradesh',
+            'assam': 'assam',
+            
+            # Eastern regions
+            'odisha': 'odisha'
+        }
+        
+        return region_to_state.get(region, 'unknown')
+    
+    def _infer_region_from_estate(self, estate: str) -> str:
+        """Infer region from estate based on Indian coffee geography."""
+        estate_to_region = {
+            # Chikmagalur estates
+            'krishnagiri_estate': 'chikmagalur',
+            'kerehaklu_estate': 'chikmagalur',
+            'basankhan_estate': 'chikmagalur',
+            'thogarihunkal_estate': 'chikmagalur',
+            'baarbara_estate': 'chikmagalur',
+            'kalledevarapura_estate': 'chikmagalur',
+            'hoysala_estate': 'chikmagalur',
+            'sandalwood_estate': 'chikmagalur',
+            'st_joseph_estate': 'chikmagalur',
+            'thippanahalli_estate': 'chikmagalur',
+            'kolli_berri_estate': 'chikmagalur',
+            'kondadkan_estate': 'chikmagalur',
+            'ratnagiri_estate': 'chikmagalur',
+            'gungegiri_estate': 'chikmagalur',
+            
+            # Coorg estates
+            'mercara_gold_estate': 'coorg',
+            'old_kent_estates': 'coorg',
+            
+            # Yercaud estates
+            'stanmore_estate': 'yercaud',
+            'hidden_falls_estate': 'yercaud',
+            'riverdale_estate': 'yercaud',
+            'gowri_estate': 'yercaud',
+            
+            # Biligiri Ranga estates
+            'attikan_estate': 'biligiri_ranga',
+            'veer_attikan_estate': 'biligiri_ranga',
+            
+            # Tamil Nadu estates
+            'seethargundu_estate': 'tamil_nadu',
+            'balmaadi_estate': 'tamil_nadu',
+            'cascara_coffee_cottages': 'tamil_nadu',
+            'dream_hill_coffee': 'tamil_nadu',
+            
+            # Andhra Pradesh estates
+            'ananthagiri_plantations': 'andhra_pradesh',
+            
+            # Northeast estates
+            'hathikuli_estate': 'assam',
+            'jampui_hills': 'tripura',
+            'darzo_village': 'nagaland',
+            'mynriah_village': 'meghalaya'
+        }
+        
+        return estate_to_region.get(estate, 'unknown')
+    
+    def _infer_country_from_state_region(self, state: str, region: str) -> str:
+        """Infer country from state or region for Indian coffee contexts."""
+        # All Indian states and regions should map to India
+        indian_states = {
+            'karnataka', 'tamil_nadu', 'kerala', 'andhra_pradesh', 'meghalaya', 
+            'mizoram', 'manipur', 'tripura', 'nagaland', 'arunachal_pradesh', 
+            'assam', 'odisha'
+        }
+        
+        indian_regions = {
+            'chikmagalur', 'coorg', 'nilgiris', 'yercaud', 'wayanad', 'araku_valley',
+            'biligiri_ranga', 'malnad', 'pulneys', 'anamalais', 'kodaikanal',
+            'travancore', 'coimbatore', 'salem', 'theni', 'idukki', 'manjarabad',
+            'sakleshpur', 'meghalaya', 'mizoram', 'manipur', 'tripura', 'nagaland',
+            'arunachal_pradesh', 'assam', 'odisha', 'andhra_pradesh', 'kerala'
+        }
+        
+        if state in indian_states or region in indian_regions:
+            return 'india'
+        
+        return 'unknown'
     
     def _calculate_confidence(self, region: str, country: str, state: str, estate: str, altitude: Optional[int]) -> float:
         """Calculate confidence score for geographic extraction."""
