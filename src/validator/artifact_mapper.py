@@ -33,12 +33,14 @@ except ImportError:
     GrindBrewingParser = None
 
 # Import image deduplication service
+from ..config.imagekit_config import ImageKitConfig
+from .type_utils import assert_imagekit_config
+
 try:
     from ..images.deduplication_service import ImageDeduplicationService
     from ..images.hash_computation import ImageHashComputer
     from ..images.imagekit_integration import ImageKitIntegrationService
     from ..images.processing_guard import ImageProcessingGuard, guard_image_operation
-    from ..config.imagekit_config import ImageKitConfig
 except ImportError:
     # Fallback for when image services are not available
     ImageDeduplicationService = None
@@ -64,18 +66,18 @@ class ArtifactMapper:
         self, 
         rpc_client=None, 
         enable_image_deduplication=True,
-        enable_imagekit=False,
-        imagekit_config=None,
+        enable_imagekit=True,
+        imagekit_config: Optional[ImageKitConfig] = None,
         integration_service=None,
         metadata_only=False
-    ):
+    ) -> None:
         """
         Initialize artifact mapper.
         
         Args:
             rpc_client: RPC client for database operations (required for deduplication)
             enable_image_deduplication: Whether to enable image deduplication
-            enable_imagekit: Whether to enable ImageKit CDN upload
+            enable_imagekit: Whether to enable ImageKit CDN upload (default: True)
             imagekit_config: ImageKit configuration (required if enable_imagekit=True)
             integration_service: ValidatorIntegrationService instance (preferred over individual params)
             metadata_only: Whether this is a metadata-only (price-only) run
@@ -149,6 +151,11 @@ class ArtifactMapper:
             self.imagekit_integration = None
             
             if enable_imagekit and rpc_client and imagekit_config and ImageKitIntegrationService:
+                # Validate ImageKit configuration type at runtime
+                assert_imagekit_config(
+                    imagekit_config, 
+                    "ImageKit configuration validation in ArtifactMapper"
+                )
                 try:
                     self.imagekit_integration = ImageKitIntegrationService(
                         rpc_client=rpc_client,
@@ -210,8 +217,8 @@ class ArtifactMapper:
             if not metadata_only:
                 # Note: coffee_id will be available after coffee upsert in the pipeline
                 # For now, we'll process images without coffee_id (deduplication will work at image level)
-                # Use a temporary coffee_id for deduplication if service is available
-                temp_coffee_id = f"temp-{artifact.product.platform_product_id}" if self.deduplication_service else None
+                # Use a temporary coffee_id for deduplication or ImageKit integration if service is available
+                temp_coffee_id = f"temp-{artifact.product.platform_product_id}" if (self.deduplication_service or self.imagekit_integration) else None
                 images_payloads = self._map_images_data(artifact, coffee_id=temp_coffee_id)
             
             result = {
@@ -277,6 +284,12 @@ class ArtifactMapper:
             'p_direct_buy_url': product.source_url,
             'p_platform_product_id': product.platform_product_id
         }
+        
+        # Map cleaned text fields (Epic C.7)
+        title_cleaned = self._map_coffee_name(product, normalization)
+        description_cleaned = self._map_description_md(product, normalization)
+        coffee_payload['p_title_cleaned'] = title_cleaned
+        coffee_payload['p_description_cleaned'] = description_cleaned
         
         # Map optional fields
         if normalization and normalization.bean_species:
@@ -580,8 +593,8 @@ class ArtifactMapper:
         images_payloads = []
         
         if artifact.product.images:
-            # Process images with deduplication service if available
-            if self.deduplication_service and coffee_id:
+            # Process images with deduplication service if available and enabled
+            if self.deduplication_service and self.enable_image_deduplication and coffee_id:
                 try:
                     # Prepare image data for deduplication
                     images_data = []
@@ -650,8 +663,8 @@ class ArtifactMapper:
                     )
                     # Fall back to standard processing
                     images_payloads = self._map_images_data_standard(artifact)
-            # Process images with ImageKit integration if service is available
-            elif self.imagekit_integration and coffee_id:
+            # Process images with ImageKit integration if service is available and enabled
+            elif self.imagekit_integration and self.enable_imagekit and coffee_id:
                 try:
                     # Prepare image data for deduplication
                     images_data = []
@@ -832,7 +845,49 @@ class ArtifactMapper:
         """Map coffee name from product and normalization data."""
         if normalization and normalization.name_clean:
             return normalization.name_clean
-        return product.title
+        
+        # Use original title as base
+        title = product.title
+        
+        # Apply text cleaning if service is available
+        if self.integration_service and self.integration_service.text_cleaning_service:
+            try:
+                cleaning_result = self.integration_service.text_cleaning_service.clean_text(title)
+                title = cleaning_result.cleaned_text
+                logger.debug(
+                    "Applied text cleaning to coffee name",
+                    original=product.title,
+                    cleaned=title,
+                    confidence=cleaning_result.confidence,
+                    changes=cleaning_result.changes_made
+                )
+            except Exception as e:
+                logger.warning(
+                    "Text cleaning failed for coffee name, using original",
+                    title=title,
+                    error=str(e)
+                )
+        
+        # Apply text normalization if service is available
+        if self.integration_service and self.integration_service.text_normalization_service:
+            try:
+                normalization_result = self.integration_service.text_normalization_service.normalize_text(title)
+                title = normalization_result.normalized_text
+                logger.debug(
+                    "Applied text normalization to coffee name",
+                    original=product.title,
+                    normalized=title,
+                    confidence=normalization_result.confidence,
+                    changes=normalization_result.changes_made
+                )
+            except Exception as e:
+                logger.warning(
+                    "Text normalization failed for coffee name, using cleaned text",
+                    title=title,
+                    error=str(e)
+                )
+        
+        return title
     
     def _map_coffee_slug(self, product: ProductModel) -> str:
         """Map coffee slug from product data."""
@@ -878,13 +933,56 @@ class ArtifactMapper:
         """Map description from product and normalization data."""
         if normalization and normalization.description_md_clean:
             return normalization.description_md_clean
-        elif product.description_md:
-            return product.description_md
+        
+        # Determine base description
+        description = None
+        if product.description_md:
+            description = product.description_md
         elif product.description_html:
             # Convert HTML to markdown (basic conversion)
-            return self._html_to_markdown(product.description_html)
+            description = self._html_to_markdown(product.description_html)
         else:
             return 'No description available'
+        
+        # Apply text cleaning if service is available
+        if self.integration_service and self.integration_service.text_cleaning_service:
+            try:
+                cleaning_result = self.integration_service.text_cleaning_service.clean_text(description)
+                description = cleaning_result.cleaned_text
+                logger.debug(
+                    "Applied text cleaning to description",
+                    original=product.description_md or product.description_html,
+                    cleaned=description,
+                    confidence=cleaning_result.confidence,
+                    changes=cleaning_result.changes_made
+                )
+            except Exception as e:
+                logger.warning(
+                    "Text cleaning failed for description, using original",
+                    description=description,
+                    error=str(e)
+                )
+        
+        # Apply text normalization if service is available
+        if self.integration_service and self.integration_service.text_normalization_service:
+            try:
+                normalization_result = self.integration_service.text_normalization_service.normalize_text(description)
+                description = normalization_result.normalized_text
+                logger.debug(
+                    "Applied text normalization to description",
+                    original=product.description_md or product.description_html,
+                    normalized=description,
+                    confidence=normalization_result.confidence,
+                    changes=normalization_result.changes_made
+                )
+            except Exception as e:
+                logger.warning(
+                    "Text normalization failed for description, using cleaned text",
+                    description=description,
+                    error=str(e)
+                )
+        
+        return description
     
     def _map_weight_grams(self, variant: VariantModel) -> int:
         """Map variant weight to grams using enhanced weight parser."""

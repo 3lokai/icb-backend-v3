@@ -1,7 +1,7 @@
 # Story C.5: Indian Coffee Varieties & Geographic Parser
 
 ## Status
-Ready for Review
+Done
 
 ## Story
 **As a** data processing engineer,
@@ -52,8 +52,8 @@ Ready for Review
   - [x] Enhance `ArtifactMapper._map_artifact_data()` with variety extraction
   - [x] Enhance `ArtifactMapper._map_artifact_data()` with geographic parsing
   - [x] Use existing `rpc_upsert_coffee()` with existing `varieties` and geographic fields
-  - [ ] Add integration tests for ArtifactMapper enhancement
-  - [ ] Test end-to-end data flow from parsing to existing RPC
+  - [x] Add integration tests for ArtifactMapper enhancement
+  - [x] Test end-to-end data flow from parsing to existing RPC
 
 ## Dev Notes
 [Source: Epic C requirements and A.1-A.5 implementation patterns]

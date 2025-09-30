@@ -8,7 +8,9 @@ from src.parser.species_parser import BeanSpeciesParserService, SpeciesConfig
 from src.validator.integration_service import ValidatorIntegrationService
 from src.validator.artifact_mapper import ArtifactMapper
 from src.config.validator_config import ValidatorConfig
-from src.config.species_config import SpeciesConfig as SpeciesConfigClass
+from src.config.species_config import SpeciesConfig
+from src.config.text_cleaning_config import TextCleaningConfig
+from src.config.text_normalization_config import TextNormalizationConfig
 
 
 class TestSpeciesParserIntegration:
@@ -16,7 +18,7 @@ class TestSpeciesParserIntegration:
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.species_config = SpeciesConfigClass(
+        self.species_config = SpeciesConfig(
             confidence_threshold=0.7,
             enable_blend_detection=True,
             enable_chicory_detection=True,
@@ -26,7 +28,11 @@ class TestSpeciesParserIntegration:
         
         self.validator_config = ValidatorConfig(
             enable_species_parsing=True,
-            species_config=self.species_config
+            species_config=self.species_config,
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
         )
         
         # Mock supabase client
@@ -46,7 +52,13 @@ class TestSpeciesParserIntegration:
     
     def test_integration_service_species_parser_disabled(self):
         """Test that species parser is None when disabled."""
-        validator_config = ValidatorConfig(enable_species_parsing=False)
+        validator_config = ValidatorConfig(
+            enable_species_parsing=False,
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
+        )
         integration_service = ValidatorIntegrationService(
             config=validator_config,
             supabase_client=self.mock_supabase_client
@@ -155,7 +167,7 @@ class TestSpeciesParserIntegration:
     def test_species_parser_configuration_integration(self):
         """Test that species parser configuration is properly integrated."""
         # Test custom configuration
-        custom_species_config = SpeciesConfigClass(
+        custom_species_config = SpeciesConfig(
             confidence_threshold=0.9,
             enable_blend_detection=False,
             batch_size=50
@@ -163,7 +175,11 @@ class TestSpeciesParserIntegration:
         
         validator_config = ValidatorConfig(
             enable_species_parsing=True,
-            species_config=custom_species_config
+            species_config=custom_species_config,
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
         )
         
         integration_service = ValidatorIntegrationService(
@@ -249,10 +265,14 @@ class TestSpeciesParserIntegration:
     def test_species_parser_confidence_threshold_integration(self):
         """Test confidence threshold integration."""
         # Test with high confidence threshold
-        high_confidence_config = SpeciesConfigClass(confidence_threshold=0.95)
+        high_confidence_config = SpeciesConfig(confidence_threshold=0.95)
         validator_config = ValidatorConfig(
             enable_species_parsing=True,
-            species_config=high_confidence_config
+            species_config=high_confidence_config,
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
         )
         
         integration_service = ValidatorIntegrationService(

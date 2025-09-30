@@ -5,8 +5,12 @@ Integration tests for fetcher service with storage functionality.
 import pytest
 import tempfile
 import shutil
+import warnings
 from pathlib import Path
 from unittest.mock import AsyncMock, patch, MagicMock
+
+# Suppress async mock warnings for this test file
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 from src.fetcher.fetcher_service import FetcherService
 from src.fetcher.storage import ResponseStorage
@@ -79,20 +83,32 @@ class TestFetcherServiceStorage:
         assert (storage_path / "metadata").exists()
     
     @pytest.mark.asyncio
+    @pytest.mark.filterwarnings("ignore::RuntimeWarning")
     async def test_fetch_from_source_storage_failure(self, fetcher_service):
         """Test that failed fetches are stored correctly."""
         # Mock a failing fetcher
         mock_fetcher = AsyncMock()
-        mock_fetcher.test_connection.side_effect = Exception("Connection failed")
+        # Make test_connection return a coroutine that raises an exception
+        async def mock_test_connection():
+            raise Exception("Connection failed")
+        mock_fetcher.test_connection = mock_test_connection
         
         with patch('src.fetcher.fetcher_service.create_fetcher_from_source_id') as mock_factory, \
              patch('src.fetcher.fetcher_service.config_manager') as mock_config:
             
-            # Create a proper async context manager mock
-            mock_context = AsyncMock()
-            mock_context.__aenter__ = AsyncMock(return_value=mock_fetcher)
-            mock_context.__aexit__ = AsyncMock(return_value=None)
-            mock_factory.return_value = mock_context
+            # Create a mock that acts as an async context manager
+            # The service code expects this to be used with 'async with'
+            class MockAsyncContextManager:
+                def __init__(self, fetcher):
+                    self.fetcher = fetcher
+                
+                async def __aenter__(self):
+                    return self.fetcher
+                
+                async def __aexit__(self, exc_type, exc_val, exc_tb):
+                    return None
+            
+            mock_factory.return_value = MockAsyncContextManager(mock_fetcher)
             mock_config.update_source_ping = AsyncMock()
             mock_config.get_source_by_id = AsyncMock(return_value=None)
             

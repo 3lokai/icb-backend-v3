@@ -129,7 +129,7 @@ class ImageKitIntegrationService:
                     imagekit_result = self.imagekit_service.upload_image(
                         image_url=image_url,
                         content=image_data.get('content'),
-                        filename=image_data.get('filename')
+                        file_name=image_data.get('filename')
                     )
                     
                     if imagekit_result.success:

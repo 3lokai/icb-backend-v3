@@ -7,6 +7,8 @@ from unittest.mock import Mock, patch
 from datetime import datetime, timezone
 
 from src.validator.integration_service import ValidatorIntegrationService
+from src.config.validator_config import ValidatorConfig
+from src.config.imagekit_config import ImageKitConfig
 from src.validator.artifact_validator import ValidationResult
 from src.validator.models import (
     ArtifactModel, ProductModel, VariantModel,
@@ -21,8 +23,17 @@ class TestRPCIntegration:
     def setup_method(self):
         """Set up test fixtures."""
         self.mock_supabase = Mock()
-        self.config = Mock()
-        self.config.storage_path = "/tmp/test_storage"
+        
+        # Create proper config with real ImageKitConfig
+        self.config = ValidatorConfig(
+            storage_path="/tmp/test_storage",
+            enable_imagekit_upload=True,
+            imagekit_config=ImageKitConfig(
+                public_key="public_test_key",
+                private_key="private_test_key", 
+                url_endpoint="https://test.imagekit.io"
+            )
+        )
         
         self.integration_service = ValidatorIntegrationService(
             config=self.config,

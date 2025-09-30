@@ -8,7 +8,7 @@ including RPC function integration and data integrity.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from src.validator.rpc_client import RPCClient
-from src.images.imagekit_config import ImageKitConfig
+from src.config.imagekit_config import ImageKitConfig
 from src.images.imagekit_integration import ImageKitIntegrationService
 
 

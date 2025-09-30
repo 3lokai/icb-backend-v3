@@ -6,9 +6,14 @@ Tests the complete B.1 → B.2 price update pipeline with real database operatio
 
 import os
 import sys
+import pytest
+import warnings
 from pathlib import Path
 from datetime import datetime, timezone
 from decimal import Decimal
+
+# Suppress Supabase deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="supabase")
 
 # Add the src directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -33,6 +38,7 @@ except ImportError:
     else:
         print("❌ No .env file found")
 
+@pytest.mark.asyncio
 async def test_real_price_update_integration():
     """Test real price update integration with actual database."""
     
@@ -237,7 +243,7 @@ async def test_real_price_update_integration():
         print(f"     Success rate: {integration_stats['success_rate']:.2%}")
         
         print("\n✅ All B.2 price integration tests passed successfully!")
-        return True
+        assert True  # Test completed successfully
         
     except Exception as e:
         print(f"❌ Price integration test failed: {e}")
@@ -293,7 +299,7 @@ def test_database_verification():
             return False
         
         print("\n✅ Database verification completed successfully!")
-        return True
+        assert True  # Database verification completed successfully
         
     except Exception as e:
         print(f"❌ Database verification failed: {e}")

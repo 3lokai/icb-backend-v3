@@ -40,6 +40,9 @@ class TestArtifactMapperEnhancement:
         self.integration_service.image_deduplication_service = Mock()
         self.integration_service.imagekit_integration = Mock()
         
+        # Mock hash service
+        self.integration_service.hash_service = Mock()
+        
         # Mock all C story parser services (C.3, C.4, C.5, C.6, C.7, C.8)
         self.integration_service.grind_parser = Mock()
         self.integration_service.species_parser = Mock()
@@ -278,6 +281,7 @@ class TestArtifactMapperEnhancement:
         disabled_integration_service.sensory_parser = None
         disabled_integration_service.content_hash_service = None
         disabled_integration_service.text_cleaner = None
+        disabled_integration_service.hash_service = None
         
         # Create ArtifactMapper with disabled services
         artifact_mapper = ArtifactMapper(integration_service=disabled_integration_service)

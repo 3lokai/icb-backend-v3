@@ -10,6 +10,8 @@ import pytest
 from src.validator.artifact_mapper import ArtifactMapper
 from src.validator.integration_service import ValidatorIntegrationService
 from src.config.validator_config import ValidatorConfig
+from src.config.text_cleaning_config import TextCleaningConfig
+from src.config.text_normalization_config import TextNormalizationConfig
 from src.parser.grind_brewing_parser import GrindBrewingParser, GrindBrewingResult
 from src.validator.models import ArtifactModel, ProductModel, VariantModel, NormalizationModel, SourceEnum
 
@@ -19,7 +21,13 @@ class TestArtifactMapperDefaultGrind:
     
     def setup_method(self):
         """Set up test fixtures."""
-        self.config = ValidatorConfig(enable_grind_brewing_parsing=True)
+        self.config = ValidatorConfig(
+            enable_grind_brewing_parsing=True,
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
+        )
         self.integration_service = ValidatorIntegrationService(config=self.config)
         self.artifact_mapper = ArtifactMapper(integration_service=self.integration_service)
     

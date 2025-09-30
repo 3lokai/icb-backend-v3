@@ -10,6 +10,8 @@ from src.validator.integration_service import ValidatorIntegrationService
 from src.validator.validation_pipeline import ValidationPipeline
 from src.validator.database_integration import DatabaseIntegration
 from src.config.validator_config import ValidatorConfig
+from src.config.text_cleaning_config import TextCleaningConfig
+from src.config.text_normalization_config import TextNormalizationConfig
 from src.validator.models import ArtifactModel, ProductModel, VariantModel, NormalizationModel, SourceEnum
 
 
@@ -20,7 +22,11 @@ class TestPipelineGrindBrewingIntegration:
         """Set up test fixtures."""
         self.config = ValidatorConfig(
             enable_grind_brewing_parsing=True,
-            grind_brewing_confidence_threshold=0.7
+            grind_brewing_confidence_threshold=0.7,
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
         )
         self.integration_service = ValidatorIntegrationService(config=self.config)
     
@@ -168,7 +174,13 @@ class TestPipelineGrindBrewingIntegration:
     
     def test_grind_brewing_parsing_disabled(self):
         """Test behavior when grind/brewing parsing is disabled."""
-        config = ValidatorConfig(enable_grind_brewing_parsing=False)
+        config = ValidatorConfig(
+            enable_grind_brewing_parsing=False,
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
+        )
         integration_service = ValidatorIntegrationService(config=config)
         
         # Parser should be None
@@ -180,7 +192,11 @@ class TestPipelineGrindBrewingIntegration:
         # Test with low confidence threshold
         config = ValidatorConfig(
             enable_grind_brewing_parsing=True,
-            grind_brewing_confidence_threshold=0.9  # Very high threshold
+            grind_brewing_confidence_threshold=0.9,  # Very high threshold
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
         )
         integration_service = ValidatorIntegrationService(config=config)
         

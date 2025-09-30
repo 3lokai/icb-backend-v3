@@ -6,6 +6,9 @@ celery
 psycopg2-binary
 python-dotenv
 
+# LLM Services
+openai
+
 # Database
 supabase
 
@@ -24,3 +27,5 @@ mypy
 
 # Monitoring
 structlog
+prometheus-client
+sentry-sdk

@@ -8,6 +8,8 @@ from unittest.mock import Mock, patch
 from pathlib import Path
 
 from src.validator.integration_service import ValidatorIntegrationService
+from src.config.validator_config import ValidatorConfig
+from src.config.imagekit_config import ImageKitConfig
 from src.validator.models import (
     ArtifactModel, ProductModel, VariantModel, ImageModel, 
     NormalizationModel, AuditModel, SourceEnum, PlatformEnum,
@@ -22,8 +24,17 @@ class TestValidatorIntegrationServiceWeightParsing:
         """Set up test fixtures."""
         # Mock the dependencies
         self.mock_supabase_client = Mock()
-        self.mock_config = Mock()
-        self.mock_config.storage_path = "/tmp/test_storage"
+        
+        # Create proper config with real ImageKitConfig
+        self.config = ValidatorConfig(
+            storage_path="/tmp/test_storage",
+            enable_imagekit_upload=True,
+            imagekit_config=ImageKitConfig(
+                public_key="public_test_key",
+                private_key="private_test_key", 
+                url_endpoint="https://test.imagekit.io"
+            )
+        )
         
         # Create service with mocked dependencies
         with patch('src.validator.integration_service.StorageReader'), \
@@ -34,7 +45,7 @@ class TestValidatorIntegrationServiceWeightParsing:
              patch('src.validator.integration_service.RawArtifactPersistence'):
             
             self.service = ValidatorIntegrationService(
-                config=self.mock_config,
+                config=self.config,
                 supabase_client=self.mock_supabase_client
             )
     

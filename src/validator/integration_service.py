@@ -18,6 +18,9 @@ from .artifact_mapper import ArtifactMapper
 from .raw_artifact_persistence import RawArtifactPersistence
 from ..config.validator_config import ValidatorConfig
 from ..config.imagekit_config import ImageKitConfig
+from ..config.text_cleaning_config import TextCleaningConfig
+from ..config.text_normalization_config import TextNormalizationConfig
+from .type_utils import assert_imagekit_config
 from ..images.deduplication_service import ImageDeduplicationService
 from ..images.imagekit_service import ImageKitService
 from ..images.imagekit_integration import ImageKitIntegrationService
@@ -32,6 +35,8 @@ from ..parser.variety_extraction import VarietyExtractionService
 from ..parser.geographic_parser import GeographicParserService
 from ..parser.sensory_parser import SensoryParserService
 from ..parser.content_hash import ContentHashService
+from ..parser.text_cleaning import TextCleaningService
+from ..parser.text_normalization import TextNormalizationService
 
 logger = get_logger(__name__)
 
@@ -51,7 +56,7 @@ class ValidatorIntegrationService:
         self,
         config: Optional[ValidatorConfig] = None,
         supabase_client=None
-    ):
+    ) -> None:
         """
         Initialize validator integration service.
         
@@ -83,6 +88,11 @@ class ValidatorIntegrationService:
             self.image_deduplication_service = None
         
         if self.config.enable_imagekit_upload and self.config.imagekit_config:
+            # Validate ImageKit configuration type at runtime
+            assert_imagekit_config(
+                self.config.imagekit_config, 
+                "ImageKit configuration validation"
+            )
             self.imagekit_service = ImageKitService(self.config.imagekit_config)
             self.imagekit_integration = ImageKitIntegrationService(
                 rpc_client=self.rpc_client,
@@ -160,8 +170,25 @@ class ValidatorIntegrationService:
         else:
             self.hash_service = None
         
+        # Initialize text cleaning service
+        if self.config.enable_text_cleaning:
+            text_cleaning_config = self.config.text_cleaning_config or TextCleaningConfig()
+            self.text_cleaning_service = TextCleaningService(text_cleaning_config)
+        else:
+            self.text_cleaning_service = None
+        
+        # Initialize text normalization service
+        if self.config.enable_text_normalization:
+            text_normalization_config = self.config.text_normalization_config or TextNormalizationConfig()
+            self.text_normalization_service = TextNormalizationService(text_normalization_config)
+        else:
+            self.text_normalization_service = None
+        
         # Initialize artifact mapper after image services
-        self.artifact_mapper = ArtifactMapper(integration_service=self)
+        self.artifact_mapper = ArtifactMapper(
+            integration_service=self,
+            imagekit_config=self.config.imagekit_config if self.config.enable_imagekit_upload else None
+        )
         
         # Service stats
         self.service_stats = {

@@ -9,6 +9,8 @@ from src.validator.artifact_mapper import ArtifactMapper
 from src.config.validator_config import ValidatorConfig
 from src.config.sensory_config import SensoryConfig
 from src.config.hash_config import HashConfig
+from src.config.text_cleaning_config import TextCleaningConfig
+from src.config.text_normalization_config import TextNormalizationConfig
 
 
 class TestEndToEndSensoryFlow:
@@ -21,7 +23,11 @@ class TestEndToEndSensoryFlow:
             enable_sensory_parsing=True,
             sensory_config=SensoryConfig(),
             enable_hash_generation=True,
-            hash_config=HashConfig()
+            hash_config=HashConfig(),
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
         )
     
     @pytest.fixture

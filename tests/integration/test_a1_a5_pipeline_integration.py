@@ -9,6 +9,8 @@ from src.validator.artifact_mapper import ArtifactMapper
 from src.config.validator_config import ValidatorConfig
 from src.config.sensory_config import SensoryConfig
 from src.config.hash_config import HashConfig
+from src.config.text_cleaning_config import TextCleaningConfig
+from src.config.text_normalization_config import TextNormalizationConfig
 
 
 class TestA1A5PipelineIntegration:
@@ -24,7 +26,11 @@ class TestA1A5PipelineIntegration:
             hash_config=HashConfig(),
             enable_geographic_parsing=True,
             enable_variety_parsing=True,
-            enable_species_parsing=True
+            enable_species_parsing=True,
+            enable_text_cleaning=True,
+            text_cleaning_config=TextCleaningConfig(),
+            enable_text_normalization=True,
+            text_normalization_config=TextNormalizationConfig()
         )
     
     @pytest.fixture

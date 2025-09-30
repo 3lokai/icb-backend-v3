@@ -1,0 +1,13 @@
+{
+  "artifact_id": "shopify_unknown_unknown",
+  "validated_at": "2025-09-30T20:27:59.324600+00:00",
+  "validation_errors": [
+    "Missing required field: roaster_domain",
+    "Missing required field: scraped_at",
+    "Missing required field: product"
+  ],
+  "validation_warnings": [],
+  "artifact_data": {
+    "source": "shopify"
+  }
+}

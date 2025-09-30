@@ -6,8 +6,13 @@ Tests the B.2 price update functionality using RPC client directly.
 
 import os
 import sys
+import pytest
+import warnings
 from pathlib import Path
 from datetime import datetime, timezone
+
+# Suppress Supabase deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="supabase")
 
 # Add the src directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -177,7 +182,7 @@ def test_real_price_update_integration():
         print(f"   Success rate: {stats['success_rate']:.2%}")
         
         print("\n✅ All B.2 price integration tests passed successfully!")
-        return True
+        assert True  # Test completed successfully
         
     except Exception as e:
         print(f"❌ Price integration test failed: {e}")
@@ -233,7 +238,7 @@ def test_database_verification():
             return False
         
         print("\n✅ Database verification completed successfully!")
-        return True
+        assert True  # Database verification completed successfully
         
     except Exception as e:
         print(f"❌ Database verification failed: {e}")

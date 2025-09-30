@@ -114,7 +114,8 @@ class SentryClient:
         """Capture message with context."""
         try:
             import sentry_sdk
-            with sentry_sdk.push_scope() as scope:
+            # Use new Sentry SDK v2+ API
+            with sentry_sdk.new_scope() as scope:
                 if context:
                     scope.set_context("alert_context", context)
                 sentry_sdk.capture_message(message, level=level)

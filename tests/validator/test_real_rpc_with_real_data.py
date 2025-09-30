@@ -6,8 +6,12 @@ Tests the complete RPC functionality with real database operations.
 
 import os
 import sys
+import warnings
 from pathlib import Path
 from datetime import datetime, timezone
+
+# Suppress Supabase deprecation warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="supabase")
 
 # Add the src directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -38,7 +42,7 @@ def test_real_rpc_integration():
     # Check environment variables
     if not os.getenv('SUPABASE_URL') or not os.getenv('SUPABASE_SERVICE_ROLE_KEY'):
         print("❌ Database credentials not available")
-        return False
+        pytest.skip("Database credentials not available")
     
     try:
         from supabase import create_client
@@ -132,13 +136,13 @@ def test_real_rpc_integration():
         print(f"   Success rate: {stats['success_rate']:.2%}")
         
         print("\\n✅ All RPC tests passed successfully!")
-        return True
+        assert True  # Test completed successfully
         
     except Exception as e:
         print(f"❌ RPC integration test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"RPC integration test failed: {e}")
 
 def test_sample_data_processing():
     """Test processing real sample data files."""
@@ -178,13 +182,13 @@ def test_sample_data_processing():
                 print(f"   File exists and is readable ✅")
         
         print("\\n✅ Sample data processing test completed!")
-        return True
+        assert True  # Test completed successfully
         
     except Exception as e:
         print(f"❌ Sample data processing test failed: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        pytest.fail(f"Sample data processing test failed: {e}")
 
 if __name__ == "__main__":
     print("🧪 Running Real RPC Integration Tests")

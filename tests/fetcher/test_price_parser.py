@@ -320,9 +320,9 @@ class TestPriceParser:
         variant_string = {'weight': '250'}
         assert self.parser._extract_weight(variant_string) == 250.0
         
-        # Test float weight
+        # Test float weight (weight parser converts to int grams)
         variant_float = {'weight': 250.5}
-        assert self.parser._extract_weight(variant_float) == 250.5
+        assert self.parser._extract_weight(variant_float) == 250.0
         
         # Test invalid weight
         variant_invalid = {'weight': 'invalid'}

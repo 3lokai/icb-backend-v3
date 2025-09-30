@@ -13,6 +13,8 @@ from .variety_config import VarietyConfig
 from .geographic_config import GeographicConfig
 from .sensory_config import SensoryConfig
 from .hash_config import HashConfig
+from .text_cleaning_config import TextCleaningConfig
+from .text_normalization_config import TextNormalizationConfig
 
 
 class ValidatorConfig(BaseModel):
@@ -62,6 +64,12 @@ class ValidatorConfig(BaseModel):
     # Hash generation configuration
     enable_hash_generation: bool = Field(default=True, description="Enable content hash generation")
     hash_config: Optional[HashConfig] = Field(default=None, description="Hash generation configuration")
+    # Text cleaning configuration
+    enable_text_cleaning: bool = Field(default=True, description="Enable text cleaning for names and descriptions")
+    text_cleaning_config: Optional[TextCleaningConfig] = Field(default=None, description="Text cleaning configuration")
+    # Text normalization configuration
+    enable_text_normalization: bool = Field(default=True, description="Enable text normalization for names and descriptions")
+    text_normalization_config: Optional[TextNormalizationConfig] = Field(default=None, description="Text normalization configuration")
     
     @field_validator('storage_path', 'invalid_artifacts_path')
     @classmethod
