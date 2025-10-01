@@ -120,7 +120,22 @@
         },
         "llm_enrichment": { "type": ["object","null"] },
         "llm_confidence": { "type": ["number","null"] },
-        "roast_inferred": { "type": "boolean" }
+        "roast_inferred": { "type": "boolean" },
+        "pipeline_processing": {
+          "type": ["object","null"],
+          "description": "C.8 normalizer pipeline processing metadata",
+          "properties": {
+            "pipeline_stage": { "type": ["string","null"], "enum": ["initialized","deterministic_parsing","llm_fallback","completed","failed", null] },
+            "processing_status": { "type": ["string","null"], "enum": ["success","partial","failed","pending_review", null] },
+            "overall_confidence": { "type": ["number","null"], "minimum": 0, "maximum": 1 },
+            "pipeline_warnings": { "type": "array", "items": { "type": "string" } },
+            "pipeline_errors": { "type": "array", "items": { "type": "string" } },
+            "llm_fallback_used": { "type": "boolean" },
+            "llm_fallback_fields": { "type": "array", "items": { "type": "string" } },
+            "processing_timestamp": { "type": ["string","null"], "format": "date-time" },
+            "execution_id": { "type": ["string","null"] }
+          }
+        }
       },
       "additionalProperties": true
     },
@@ -227,7 +242,18 @@
     },
     "llm_enrichment": null,
     "llm_confidence": null,
-    "roast_inferred": false
+    "roast_inferred": false,
+    "pipeline_processing": {
+      "pipeline_stage": "completed",
+      "processing_status": "success",
+      "overall_confidence": 0.85,
+      "pipeline_warnings": ["Low confidence in roast level detection"],
+      "pipeline_errors": [],
+      "llm_fallback_used": false,
+      "llm_fallback_fields": [],
+      "processing_timestamp": "2025-09-21T10:00:05Z",
+      "execution_id": "pipeline-exec-20250921-001"
+    }
   },
   "collector_signals": {
     "response_status": 200,

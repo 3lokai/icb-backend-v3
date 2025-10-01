@@ -71,6 +71,12 @@ class ValidatorConfig(BaseModel):
     enable_text_normalization: bool = Field(default=True, description="Enable text normalization for names and descriptions")
     text_normalization_config: Optional[TextNormalizationConfig] = Field(default=None, description="Text normalization configuration")
     
+    # C.8 Normalizer Pipeline configuration
+    enable_normalizer_pipeline: bool = Field(default=True, description="Enable C.8 normalizer pipeline orchestration")
+    enable_llm_fallback: bool = Field(default=True, description="Enable LLM fallback for ambiguous cases using Epic D services")
+    pipeline_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Confidence threshold for pipeline processing")
+    enable_pipeline_metrics: bool = Field(default=True, description="Enable pipeline metrics and monitoring")
+    
     @field_validator('storage_path', 'invalid_artifacts_path')
     @classmethod
     def validate_paths(cls, v):

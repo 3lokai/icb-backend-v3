@@ -6,7 +6,7 @@ performance issues, and system anomalies in the coffee scraper.
 """
 
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from contextlib import contextmanager
 
 
@@ -263,6 +263,258 @@ class SentryIntegration:
         except Exception as e:
             print(f"Failed to add breadcrumb: {e}")
     
+    def capture_pipeline_error(
+        self,
+        error: Exception,
+        component: str,
+        operation: str,
+        artifact_id: str = "",
+        pipeline_state: Dict[str, Any] = None,
+        user_info: Dict[str, Any] = None
+    ):
+        """Capture pipeline errors with comprehensive context."""
+        try:
+            import sentry_sdk
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("component", component)
+                scope.set_tag("operation", operation)
+                scope.set_tag("artifact_id", artifact_id)
+                scope.set_tag("error_category", "pipeline")
+                
+                # Add pipeline context
+                if pipeline_state:
+                    scope.set_context("pipeline_state", pipeline_state)
+                
+                # Add user context
+                if user_info:
+                    scope.set_context("user_info", user_info)
+                
+                # Add artifact context
+                if artifact_id:
+                    scope.set_context("artifact", {
+                        "id": artifact_id,
+                        "component": component,
+                        "operation": operation
+                    })
+                
+                sentry_sdk.capture_exception(error)
+        except Exception as e:
+            print(f"Failed to capture pipeline error: {e}")
+    
+    def capture_normalizer_error(
+        self,
+        error: Exception,
+        artifact_id: str,
+        parser_type: str,
+        validation_errors: List[str] = None,
+        pipeline_state: Dict[str, Any] = None
+    ):
+        """Capture normalizer pipeline errors (C.1-C.8)."""
+        try:
+            import sentry_sdk
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("component", "normalizer")
+                scope.set_tag("parser_type", parser_type)
+                scope.set_tag("artifact_id", artifact_id)
+                scope.set_tag("error_category", "normalizer")
+                
+                # Add validation context
+                if validation_errors:
+                    scope.set_context("validation_errors", {
+                        "errors": validation_errors,
+                        "count": len(validation_errors)
+                    })
+                
+                # Add pipeline state
+                if pipeline_state:
+                    scope.set_context("pipeline_state", pipeline_state)
+                
+                # Add artifact context
+                scope.set_context("artifact", {
+                    "id": artifact_id,
+                    "parser_type": parser_type,
+                    "component": "normalizer"
+                })
+                
+                sentry_sdk.capture_exception(error)
+        except Exception as e:
+            print(f"Failed to capture normalizer error: {e}")
+    
+    def capture_llm_error(
+        self,
+        error: Exception,
+        artifact_id: str,
+        llm_provider: str,
+        model: str,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        cost: float = 0.0
+    ):
+        """Capture LLM enrichment errors (D.1-D.2)."""
+        try:
+            import sentry_sdk
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("component", "llm_enrichment")
+                scope.set_tag("llm_provider", llm_provider)
+                scope.set_tag("model", model)
+                scope.set_tag("artifact_id", artifact_id)
+                scope.set_tag("error_category", "llm")
+                
+                # Add LLM context
+                scope.set_context("llm_usage", {
+                    "provider": llm_provider,
+                    "model": model,
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "cost": cost,
+                    "total_tokens": prompt_tokens + completion_tokens
+                })
+                
+                # Add artifact context
+                scope.set_context("artifact", {
+                    "id": artifact_id,
+                    "component": "llm_enrichment"
+                })
+                
+                sentry_sdk.capture_exception(error)
+        except Exception as e:
+            print(f"Failed to capture LLM error: {e}")
+    
+    def capture_image_error(
+        self,
+        error: Exception,
+        artifact_id: str,
+        image_url: str,
+        operation: str,
+        image_size: int = 0,
+        processing_time: float = 0.0
+    ):
+        """Capture image handling errors (F.1-F.3)."""
+        try:
+            import sentry_sdk
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("component", "image_handling")
+                scope.set_tag("operation", operation)
+                scope.set_tag("artifact_id", artifact_id)
+                scope.set_tag("error_category", "image")
+                
+                # Add image context
+                scope.set_context("image_info", {
+                    "url": image_url,
+                    "size_bytes": image_size,
+                    "processing_time": processing_time,
+                    "operation": operation
+                })
+                
+                # Add artifact context
+                scope.set_context("artifact", {
+                    "id": artifact_id,
+                    "component": "image_handling"
+                })
+                
+                sentry_sdk.capture_exception(error)
+        except Exception as e:
+            print(f"Failed to capture image error: {e}")
+    
+    def capture_fetcher_error(
+        self,
+        error: Exception,
+        source: str,
+        platform: str,
+        operation: str,
+        roaster_id: str = "",
+        retry_count: int = 0
+    ):
+        """Capture fetcher errors (A.1-A.5)."""
+        try:
+            import sentry_sdk
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("component", "fetcher")
+                scope.set_tag("source", source)
+                scope.set_tag("platform", platform)
+                scope.set_tag("operation", operation)
+                scope.set_tag("roaster_id", roaster_id)
+                scope.set_tag("error_category", "fetcher")
+                
+                # Add fetcher context
+                scope.set_context("fetcher_info", {
+                    "source": source,
+                    "platform": platform,
+                    "operation": operation,
+                    "roaster_id": roaster_id,
+                    "retry_count": retry_count,
+                    "timestamp": time.time()
+                })
+                
+                sentry_sdk.capture_exception(error)
+        except Exception as e:
+            print(f"Failed to capture fetcher error: {e}")
+    
+    def capture_system_failure(
+        self,
+        error: Exception,
+        component: str,
+        failure_type: str,
+        system_state: Dict[str, Any] = None
+    ):
+        """Capture critical system failures."""
+        try:
+            import sentry_sdk
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("component", component)
+                scope.set_tag("failure_type", failure_type)
+                scope.set_tag("severity", "critical")
+                scope.set_tag("error_category", "system_failure")
+                
+                # Add system state
+                if system_state:
+                    scope.set_context("system_state", system_state)
+                
+                # Add failure context
+                scope.set_context("failure_info", {
+                    "component": component,
+                    "failure_type": failure_type,
+                    "timestamp": time.time()
+                })
+                
+                sentry_sdk.capture_exception(error)
+        except Exception as e:
+            print(f"Failed to capture system failure: {e}")
+    
+    def capture_threshold_breach(
+        self,
+        metric_name: str,
+        current_value: float,
+        threshold: float,
+        component: str,
+        severity: str = "warning"
+    ):
+        """Capture threshold breach events."""
+        try:
+            import sentry_sdk
+            with sentry_sdk.push_scope() as scope:
+                scope.set_tag("event_type", "threshold_breach")
+                scope.set_tag("metric_name", metric_name)
+                scope.set_tag("component", component)
+                scope.set_tag("severity", severity)
+                
+                # Add threshold context
+                scope.set_context("threshold_breach", {
+                    "metric_name": metric_name,
+                    "current_value": current_value,
+                    "threshold": threshold,
+                    "exceeded_by": ((current_value - threshold) / threshold * 100) if threshold > 0 else 0,
+                    "component": component,
+                    "timestamp": time.time()
+                })
+                
+                sentry_sdk.capture_message(
+                    f"Threshold breach: {metric_name} = {current_value:.2f} (threshold: {threshold:.2f})",
+                    level=severity
+                )
+        except Exception as e:
+            print(f"Failed to capture threshold breach: {e}")
+    
     def get_integration_status(self) -> Dict[str, Any]:
         """Get Sentry integration status."""
         try:
@@ -275,6 +527,15 @@ class SentryIntegration:
                     "AsyncioIntegration",
                     "HttpxIntegration", 
                     "SqlalchemyIntegration"
+                ],
+                "error_capture_methods": [
+                    "capture_pipeline_error",
+                    "capture_normalizer_error", 
+                    "capture_llm_error",
+                    "capture_image_error",
+                    "capture_fetcher_error",
+                    "capture_system_failure",
+                    "capture_threshold_breach"
                 ]
             }
         except ImportError:

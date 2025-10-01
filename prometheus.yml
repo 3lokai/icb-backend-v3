@@ -1,0 +1,44 @@
+# Prometheus Configuration for Grafana Cloud
+# This configures Prometheus to send metrics to Grafana Cloud
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# Remote write configuration for Grafana Cloud
+remote_write:
+  - url: ${GRAFANA_CLOUD_PROMETHEUS_URL}
+    basic_auth:
+      username: ${GRAFANA_CLOUD_PROMETHEUS_USERNAME}
+      password: ${GRAFANA_CLOUD_PROMETHEUS_PASSWORD}
+    # Optional: Configure remote write settings
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'icb_.*'
+        action: keep
+
+# Scrape configuration for icb-backend
+scrape_configs:
+  - job_name: 'icb-backend'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    # Add labels for better organization
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'icb-backend-${FLY_APP_NAME:-local}'
+      - target_label: job
+        replacement: 'icb-backend'
+      - target_label: environment
+        replacement: '${SENTRY_ENVIRONMENT:-development}'
+
+# Optional: Add other services if needed
+  - job_name: 'icb-backend-health'
+    static_configs:
+      - targets: ['localhost:8000']
+    metrics_path: '/health'
+    scrape_interval: 60s
+    scrape_timeout: 5s

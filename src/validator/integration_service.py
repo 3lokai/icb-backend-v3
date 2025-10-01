@@ -38,6 +38,23 @@ from ..parser.content_hash import ContentHashService
 from ..parser.text_cleaning import TextCleaningService
 from ..parser.text_normalization import TextNormalizationService
 
+# Import C.8 normalizer pipeline components
+from ..parser.normalizer_pipeline import NormalizerPipelineService
+from ..parser.llm_fallback_integration import LLMFallbackService
+from ..parser.pipeline_state import PipelineState
+from ..config.pipeline_config import PipelineConfig
+from ..config.llm_config import LLMConfig
+
+# Import Epic D services for LLM fallback
+from ..llm.deepseek_wrapper import DeepSeekWrapperService
+from ..llm.cache_service import CacheService
+from ..llm.rate_limiter import RateLimiter
+from ..llm.confidence_evaluator import ConfidenceEvaluator
+from ..llm.review_workflow import ReviewWorkflow
+from ..llm.enrichment_persistence import EnrichmentPersistence
+from ..llm.llm_metrics import LLMServiceMetrics
+from ..monitoring.confidence_metrics import ConfidenceMetrics
+
 logger = get_logger(__name__)
 
 
@@ -189,6 +206,115 @@ class ValidatorIntegrationService:
             integration_service=self,
             imagekit_config=self.config.imagekit_config if self.config.enable_imagekit_upload else None
         )
+        
+        # Initialize C.8 normalizer pipeline (if enabled)
+        self.normalizer_pipeline = None
+        self.llm_fallback_service = None
+        
+        if self.config.enable_normalizer_pipeline:
+            try:
+                # Create pipeline configuration
+                pipeline_config = PipelineConfig(
+                    enable_weight_parsing=self.config.enable_weight_parsing,
+                    enable_roast_parsing=self.config.enable_roast_parsing,
+                    enable_process_parsing=self.config.enable_process_parsing,
+                    enable_tag_parsing=self.config.enable_tag_normalization,
+                    enable_notes_parsing=self.config.enable_notes_extraction,
+                    enable_grind_parsing=self.config.enable_grind_brewing_parsing,
+                    enable_species_parsing=self.config.enable_species_parsing,
+                    enable_variety_parsing=self.config.enable_variety_parsing,
+                    enable_geographic_parsing=self.config.enable_geographic_parsing,
+                    enable_sensory_parsing=self.config.enable_sensory_parsing,
+                    enable_hash_generation=self.config.enable_hash_generation,
+                    enable_text_cleaning=self.config.enable_text_cleaning,
+                    enable_text_normalization=self.config.enable_text_normalization
+                )
+                
+                # Initialize normalizer pipeline
+                self.normalizer_pipeline = NormalizerPipelineService(pipeline_config)
+                
+                # Initialize Epic D services for LLM fallback (if available)
+                if self.config.enable_llm_fallback:
+                    try:
+                        # Use pipeline config for LLM fallback settings
+                        llm_fallback_config = pipeline_config.llm_fallback
+                        
+                        # Create rate limiter with proper configuration
+                        rate_limiter_config = {
+                            'requests_per_minute': llm_fallback_config.rate_limit_per_minute,
+                            'requests_per_hour': llm_fallback_config.rate_limit_per_minute * 60,  # 60x per hour
+                            'requests_per_day': llm_fallback_config.rate_limit_per_minute * 60 * 24  # 24x per day
+                        }
+                        rate_limiter = RateLimiter(rate_limiter_config)
+                        
+                        # Create cache service
+                        cache_service = CacheService()
+                        
+                        # Create LLM metrics
+                        llm_metrics = LLMServiceMetrics()
+                        
+                        # Create Epic D service instances with proper configs
+                        deepseek_service = DeepSeekWrapperService(
+                            llm_fallback_config.deepseek_config,
+                            cache_service,
+                            rate_limiter,
+                            llm_metrics
+                        )
+                        
+                        # Create confidence evaluator
+                        confidence_evaluator = ConfidenceEvaluator(llm_fallback_config.confidence_config)
+                        
+                        # Create review workflow
+                        review_workflow = ReviewWorkflow(llm_fallback_config.review_config)
+                        
+                        # Create enrichment persistence with config
+                        enrichment_persistence = EnrichmentPersistence(llm_fallback_config.persistence_config)
+                        
+                        # Create confidence metrics (correct class name)
+                        confidence_metrics = ConfidenceMetrics()
+                        
+                        # Initialize LLM fallback service
+                        self.llm_fallback_service = LLMFallbackService(
+                            llm_fallback_config,  # Use pipeline config's LLM fallback config
+                            deepseek_service,
+                            cache_service,
+                            rate_limiter,
+                            confidence_evaluator,
+                            review_workflow,
+                            enrichment_persistence,
+                            llm_metrics,
+                            confidence_metrics
+                        )
+                        
+                        # Initialize Epic D services in normalizer pipeline
+                        self.normalizer_pipeline.initialize_epic_d_services(
+                            deepseek_service,
+                            cache_service,
+                            rate_limiter,
+                            confidence_evaluator,
+                            review_workflow,
+                            enrichment_persistence,
+                            llm_metrics,
+                            confidence_metrics
+                        )
+                        
+                        logger.info("C.8 normalizer pipeline with LLM fallback initialized")
+                        
+                    except Exception as e:
+                        logger.warning("Failed to initialize LLM fallback services", error=str(e))
+                        self.llm_fallback_service = None
+                
+                logger.info("C.8 normalizer pipeline initialized")
+                
+                # Update artifact mapper with normalizer pipeline
+                if self.artifact_mapper:
+                    self.artifact_mapper.normalizer_pipeline = self.normalizer_pipeline
+                    logger.info("Artifact mapper updated with normalizer pipeline")
+                
+            except Exception as e:
+                logger.error("Failed to initialize C.8 normalizer pipeline", error=str(e))
+                self.normalizer_pipeline = None
+                self.llm_fallback_service = None
         
         # Service stats
         self.service_stats = {

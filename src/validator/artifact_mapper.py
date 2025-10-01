@@ -69,7 +69,8 @@ class ArtifactMapper:
         enable_imagekit=True,
         imagekit_config: Optional[ImageKitConfig] = None,
         integration_service=None,
-        metadata_only=False
+        metadata_only=False,
+        normalizer_pipeline=None
     ) -> None:
         """
         Initialize artifact mapper.
@@ -93,6 +94,9 @@ class ArtifactMapper:
         
         # Store integration service for access to all services
         self.integration_service = integration_service
+        
+        # Store normalizer pipeline for C.8 integration
+        self.normalizer_pipeline = normalizer_pipeline
         
         # Initialize weight parser for enhanced weight parsing
         if integration_service and hasattr(integration_service, 'weight_parser'):
@@ -258,6 +262,206 @@ class ArtifactMapper:
     def _map_coffee_data(self, artifact: ArtifactModel, roaster_id: str) -> Dict[str, Any]:
         """
         Map artifact to coffee RPC payload.
+        
+        Args:
+            artifact: Canonical artifact model
+            roaster_id: Roaster ID
+            
+        Returns:
+            Coffee RPC payload
+        """
+        product = artifact.product
+        normalization = artifact.normalization
+        
+        # Use C.8 normalizer pipeline if available
+        if self.normalizer_pipeline:
+            return self._map_coffee_data_with_pipeline(artifact, roaster_id)
+        
+        # Fallback to individual parsers (legacy behavior)
+        return self._map_coffee_data_legacy(artifact, roaster_id)
+    
+    def _map_coffee_data_with_pipeline(self, artifact: ArtifactModel, roaster_id: str) -> Dict[str, Any]:
+        """
+        Map artifact to coffee RPC payload using C.8 normalizer pipeline.
+        
+        Args:
+            artifact: Canonical artifact model
+            roaster_id: Roaster ID
+            
+        Returns:
+            Coffee RPC payload
+        """
+        product = artifact.product
+        normalization = artifact.normalization
+        
+        # Convert artifact to dictionary for pipeline processing
+        artifact_dict = {
+            'product': {
+                'title': product.title,
+                'description_html': product.description_html,
+                'platform_product_id': product.platform_product_id,
+                'source_url': product.source_url
+            },
+            'variants': [
+                {
+                    'weight': variant.weight,
+                    'price': variant.price,
+                    'currency': variant.currency,
+                    'grind': variant.grind,
+                    'availability': variant.availability
+                } for variant in product.variants
+            ],
+            'roaster_id': roaster_id
+        }
+        
+        # Process through normalizer pipeline
+        try:
+            pipeline_result = self.normalizer_pipeline.process_artifact(artifact_dict)
+            
+            # Extract normalized data from pipeline result
+            normalized_data = pipeline_result.get('normalized_data', {})
+            pipeline_warnings = pipeline_result.get('warnings', [])
+            pipeline_errors = pipeline_result.get('errors', [])
+            
+            # Log pipeline processing results
+            if pipeline_warnings:
+                logger.warning("Normalizer pipeline warnings", 
+                              warnings=pipeline_warnings,
+                              artifact_id=product.platform_product_id)
+            
+            if pipeline_errors:
+                logger.error("Normalizer pipeline errors", 
+                            errors=pipeline_errors,
+                            artifact_id=product.platform_product_id)
+            
+        except Exception as e:
+            logger.error("Normalizer pipeline failed, falling back to legacy parsing", 
+                        error=str(e),
+                        artifact_id=product.platform_product_id)
+            # Fallback to legacy parsing
+            return self._map_coffee_data_legacy(artifact, roaster_id)
+        
+        # Map required fields using pipeline results
+        coffee_payload = {
+            'p_bean_species': normalized_data.get('bean_species'),
+            'p_name': normalized_data.get('coffee_name', product.title),
+            'p_slug': self._map_coffee_slug(product),
+            'p_roaster_id': roaster_id,
+            'p_process': normalized_data.get('process_method'),
+            'p_process_raw': normalized_data.get('process_method_raw'),
+            'p_roast_level': normalized_data.get('roast_level'),
+            'p_roast_level_raw': normalized_data.get('roast_level_raw'),
+            'p_roast_style_raw': normalized_data.get('roast_style_raw'),
+            'p_description_md': normalized_data.get('description_cleaned', product.description_html),
+            'p_direct_buy_url': product.source_url,
+            'p_platform_product_id': product.platform_product_id
+        }
+        
+        # Map cleaned text fields (Epic C.7)
+        coffee_payload['p_title_cleaned'] = normalized_data.get('title_cleaned', product.title)
+        coffee_payload['p_description_cleaned'] = normalized_data.get('description_cleaned', product.description_html)
+        
+        # Map optional fields from pipeline results
+        if normalized_data.get('bean_species'):
+            coffee_payload['p_bean_species'] = normalized_data['bean_species']
+        
+        # Map decaf flag (infer from product title/description)
+        decaf = self._infer_decaf_flag(product)
+        if decaf is not None:
+            coffee_payload['p_decaf'] = decaf
+        
+        # Map raw data with pipeline results
+        coffee_payload['p_source_raw'] = self._build_source_raw_with_pipeline(artifact, normalized_data)
+        coffee_payload['p_notes_raw'] = self._build_notes_raw_with_pipeline(normalized_data)
+        
+        # Map tags from pipeline results
+        if normalized_data.get('tags'):
+            coffee_payload['p_tags'] = normalized_data['tags']
+        
+        # Map notes from pipeline results
+        if normalized_data.get('notes'):
+            coffee_payload['p_notes_raw'] = normalized_data['notes']
+        
+        # Map varieties from pipeline results
+        if normalized_data.get('varieties'):
+            coffee_payload['p_varieties'] = normalized_data['varieties']
+        
+        # Map geographic data from pipeline results
+        if normalized_data.get('geographic_data'):
+            geo_data = normalized_data['geographic_data']
+            if geo_data.get('region'):
+                coffee_payload['p_region'] = geo_data['region']
+            if geo_data.get('country'):
+                coffee_payload['p_country'] = geo_data['country']
+            if geo_data.get('altitude'):
+                coffee_payload['p_altitude'] = geo_data['altitude']
+        
+        # Map sensory data from pipeline results
+        if normalized_data.get('sensory_data'):
+            sensory_data = normalized_data['sensory_data']
+            if sensory_data.get('acidity') is not None:
+                coffee_payload['p_acidity'] = sensory_data['acidity']
+            if sensory_data.get('body') is not None:
+                coffee_payload['p_body'] = sensory_data['body']
+        
+        # Map hash data from pipeline results
+        if normalized_data.get('content_hash'):
+            coffee_payload['p_content_hash'] = normalized_data['content_hash']
+        
+        # Map default grind from variant grind data
+        default_grind = self._determine_default_grind(artifact.product.variants)
+        if default_grind:
+            coffee_payload['p_default_grind'] = default_grind
+        
+        self.mapping_stats['coffee_mapped'] += 1
+        
+        return coffee_payload
+    
+    def _build_source_raw_with_pipeline(self, artifact: ArtifactModel, normalized_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Build source_raw data with pipeline results."""
+        source_raw = {
+            'original_title': artifact.product.title,
+            'original_description': artifact.product.description_html,
+            'platform_product_id': artifact.product.platform_product_id,
+            'source_url': artifact.product.source_url,
+            'pipeline_processed': True,
+            'pipeline_timestamp': normalized_data.get('pipeline_timestamp'),
+            'pipeline_confidence': normalized_data.get('overall_confidence'),
+            'pipeline_warnings': normalized_data.get('pipeline_warnings', []),
+            'pipeline_errors': normalized_data.get('pipeline_errors', [])
+        }
+        
+        # Add pipeline-specific data
+        if normalized_data.get('llm_fallback_used'):
+            source_raw['llm_fallback_used'] = normalized_data['llm_fallback_used']
+            source_raw['llm_fallback_fields'] = normalized_data.get('llm_fallback_fields', [])
+        
+        return source_raw
+    
+    def _build_notes_raw_with_pipeline(self, normalized_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Build notes_raw data with pipeline results."""
+        notes_raw = {
+            'pipeline_processed': True,
+            'pipeline_timestamp': normalized_data.get('pipeline_timestamp'),
+            'pipeline_confidence': normalized_data.get('overall_confidence')
+        }
+        
+        # Add extracted notes from pipeline
+        if normalized_data.get('notes'):
+            notes_raw['extracted_notes'] = normalized_data['notes']
+        
+        # Add processing warnings and errors
+        if normalized_data.get('pipeline_warnings'):
+            notes_raw['processing_warnings'] = normalized_data['pipeline_warnings']
+        
+        if normalized_data.get('pipeline_errors'):
+            notes_raw['processing_errors'] = normalized_data['pipeline_errors']
+        
+        return notes_raw
+    
+    def _map_coffee_data_legacy(self, artifact: ArtifactModel, roaster_id: str) -> Dict[str, Any]:
+        """
+        Map artifact to coffee RPC payload using legacy individual parsers.
         
         Args:
             artifact: Canonical artifact model
