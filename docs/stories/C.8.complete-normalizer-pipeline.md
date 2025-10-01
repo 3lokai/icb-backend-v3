@@ -1,7 +1,7 @@
 # Story C.8: Integration: Complete normalizer pipeline
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** data processing engineer,

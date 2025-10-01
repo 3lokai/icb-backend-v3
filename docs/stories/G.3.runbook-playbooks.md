@@ -1,7 +1,7 @@
 # Story G.3: Runbook & playbooks
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** system administrator,
