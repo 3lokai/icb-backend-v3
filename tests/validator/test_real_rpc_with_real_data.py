@@ -7,6 +7,7 @@ Tests the complete RPC functionality with real database operations.
 import os
 import sys
 import warnings
+import pytest
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -46,7 +47,7 @@ def test_real_rpc_integration():
     
     try:
         from supabase import create_client
-        from validator.rpc_client import RPCClient
+        from src.validator.rpc_client import RPCClient
         
         # Create Supabase client
         supabase = create_client(
@@ -150,8 +151,8 @@ def test_sample_data_processing():
     print("\\n📁 Testing sample data processing...")
     
     try:
-        from validator.integration_service import ValidatorIntegrationService
-        from config.validator_config import ValidatorConfig
+        from src.validator.integration_service import ValidatorIntegrationService
+        from src.config.validator_config import ValidatorConfig
         
         # Create test configuration
         config = ValidatorConfig()
@@ -166,7 +167,7 @@ def test_sample_data_processing():
             print(f"\\n🛍️ Processing Shopify sample: {shopify_file}")
             
             # This would normally process the file, but we'll just verify it exists
-            with open(shopify_file, 'r') as f:
+            with open(shopify_file, 'r', encoding='utf-8', errors='replace') as f:
                 data = f.read()
                 print(f"   File size: {len(data)} bytes")
                 print(f"   File exists and is readable ✅")
@@ -176,7 +177,7 @@ def test_sample_data_processing():
         if os.path.exists(woo_file):
             print(f"\\n🛒 Processing WooCommerce sample: {woo_file}")
             
-            with open(woo_file, 'r') as f:
+            with open(woo_file, 'r', encoding='utf-8', errors='replace') as f:
                 data = f.read()
                 print(f"   File size: {len(data)} bytes")
                 print(f"   File exists and is readable ✅")

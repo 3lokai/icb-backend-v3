@@ -208,11 +208,14 @@ class TestTextCleaningIntegration:
         assert 'p_title_cleaned' in coffee_payload
         assert 'p_description_cleaned' in coffee_payload
         
-        # Since cleaning is disabled, cleaned text should be same as original
-        assert coffee_payload['p_title_cleaned'] == self.test_artifact.product.title
-        # HTML is converted to plain text even when cleaning is disabled
-        expected_text = "This is a great coffee with line breaks"
-        assert coffee_payload['p_description_cleaned'] == expected_text
+        # With consistent HTML-first strategy, both title and description have HTML converted to plain text
+        # Title: "<h1>Test Coffee</h1> with <em>special</em> features" -> "Test Coffee with special features"
+        expected_title = "Test Coffee with special features"
+        assert coffee_payload['p_title_cleaned'] == expected_title
+        
+        # Description: HTML is converted to plain text even when cleaning is disabled
+        expected_description = "This is a great coffee with line breaks"
+        assert coffee_payload['p_description_cleaned'] == expected_description
     
     def test_text_cleaning_error_handling(self):
         """Test that text cleaning errors are handled gracefully."""
@@ -232,8 +235,9 @@ class TestTextCleaningIntegration:
             assert 'p_title_cleaned' in coffee_payload
             assert 'p_description_cleaned' in coffee_payload
             
-            # Should use original text when cleaning fails
-            assert coffee_payload['p_title_cleaned'] == self.test_artifact.product.title
+            # Should use HTML-converted text when cleaning fails (consistent HTML-first strategy)
+            expected_title = "Test Coffee with special features"  # HTML converted to plain text
+            assert coffee_payload['p_title_cleaned'] == expected_title
     
     def test_text_normalization_error_handling(self):
         """Test that text normalization errors are handled gracefully."""

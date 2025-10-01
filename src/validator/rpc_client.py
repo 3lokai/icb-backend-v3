@@ -4,6 +4,7 @@ RPC client wrapper for Supabase RPC calls with error handling and retry logic.
 
 import time
 import json
+import uuid
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 from enum import Enum
@@ -301,7 +302,7 @@ class RPCClient:
             'p_bean_species': bean_species,
             'p_name': name,
             'p_slug': slug,
-            'p_roaster_id': roaster_id,
+            'p_roaster_id': roaster_id,  # Pass as string, database will handle UUID conversion
             'p_process': process,
             'p_process_raw': process_raw,
             'p_roast_level': roast_level,

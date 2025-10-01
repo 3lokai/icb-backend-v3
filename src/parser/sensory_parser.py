@@ -28,6 +28,20 @@ class SensoryResult(BaseModel):
     source: str = Field(default="icb_inferred", description="Source of sensory data")
     extracted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Extraction timestamp")
     
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert result to dictionary."""
+        return {
+            "acidity": self.acidity,
+            "body": self.body,
+            "sweetness": self.sweetness,
+            "bitterness": self.bitterness,
+            "aftertaste": self.aftertaste,
+            "clarity": self.clarity,
+            "confidence": self.confidence,
+            "source": self.source,
+            "extracted_at": self.extracted_at.isoformat()
+        }
+    
     class Config:
         """Pydantic configuration."""
         json_encoders = {

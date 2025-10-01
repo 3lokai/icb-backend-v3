@@ -193,9 +193,10 @@ class TestA1A5PipelineIntegration:
         
         # Mock product
         mock_product = Mock()
-        mock_product.name = "Test Coffee"
-        mock_product.description_md = "This coffee has high acidity and full body with bright citrus notes"
-        mock_product.description_html = None
+        mock_product.title = "Test Coffee 250g Medium Roast"
+        mock_product.name = "Test Coffee 250g Medium Roast"
+        mock_product.description_md = "This 100% arabica coffee has high acidity and full body with bright citrus notes"
+        mock_product.description_html = "This 100% arabica coffee has high acidity and full body with bright citrus notes"
         mock_product.platform_product_id = "test-123"
         mock_product.source_url = "https://example.com/coffee"
         
@@ -210,6 +211,9 @@ class TestA1A5PipelineIntegration:
         
         # Mock variants
         mock_variant = Mock()
+        mock_variant.title = "250g Whole Bean"
+        mock_variant.options = ["250g", "Whole Bean"]
+        mock_variant.attributes = {"weight": "250g", "grind": "Whole Bean"}
         mock_variant.grind_type = "whole_bean"
         mock_product.variants = [mock_variant]
         

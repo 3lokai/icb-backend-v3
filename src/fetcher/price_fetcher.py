@@ -11,6 +11,7 @@ from .base_fetcher import BaseFetcher, FetcherConfig
 from .price_parser import PriceParser, PriceDelta
 from .shopify_fetcher import ShopifyFetcher
 from .woocommerce_fetcher import WooCommerceFetcher
+from .encoding_utils import safe_decode_json
 
 logger = get_logger(__name__)
 
@@ -317,7 +318,7 @@ class PriceFetcher:
             
             if status_code == 200:
                 import json
-                product_data = json.loads(content.decode('utf-8'))
+                product_data = safe_decode_json(content)
                 
                 # Extract product from response
                 if current_platform == "shopify":

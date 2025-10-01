@@ -33,8 +33,13 @@ except ImportError:
     GrindBrewingParser = None
 
 # Import image deduplication service
-from ..config.imagekit_config import ImageKitConfig
-from .type_utils import assert_imagekit_config
+try:
+    from ..config.imagekit_config import ImageKitConfig
+    from .type_utils import assert_imagekit_config
+except ImportError:
+    # Fallback for when imagekit config is not available
+    ImageKitConfig = None
+    assert_imagekit_config = None
 
 try:
     from ..images.deduplication_service import ImageDeduplicationService
@@ -296,6 +301,8 @@ class ArtifactMapper:
         
         # Convert artifact to dictionary for pipeline processing
         artifact_dict = {
+            'title': product.title,
+            'description': product.description_html or '',
             'product': {
                 'title': product.title,
                 'description_html': product.description_html,
@@ -304,11 +311,11 @@ class ArtifactMapper:
             },
             'variants': [
                 {
-                    'weight': variant.weight,
+                    'weight': self._map_weight_grams(variant),
                     'price': variant.price,
                     'currency': variant.currency,
-                    'grind': variant.grind,
-                    'availability': variant.availability
+                    'grind': self._parse_grind_for_pipeline(variant),
+                    'availability': variant.in_stock
                 } for variant in product.variants
             ],
             'roaster_id': roaster_id
@@ -322,6 +329,143 @@ class ArtifactMapper:
             normalized_data = pipeline_result.get('normalized_data', {})
             pipeline_warnings = pipeline_result.get('warnings', [])
             pipeline_errors = pipeline_result.get('errors', [])
+            
+            # Extract sensory data from deterministic results
+            deterministic_results = pipeline_result.get('deterministic_results', {})
+            if 'sensory' in deterministic_results:
+                sensory_result = deterministic_results['sensory']
+                if sensory_result.get('success') and sensory_result.get('result_data'):
+                    sensory_data = sensory_result['result_data']
+                    normalized_data['sensory_data'] = sensory_data
+                    logger.debug("Sensory data extracted", 
+                                sensory_data=sensory_data,
+                                artifact_id=product.platform_product_id)
+                else:
+                    logger.debug("Sensory result not successful or missing data", 
+                                success=sensory_result.get('success'),
+                                has_result_data=bool(sensory_result.get('result_data')),
+                                artifact_id=product.platform_product_id)
+            else:
+                logger.debug("No sensory result in deterministic results", 
+                            available_keys=list(deterministic_results.keys()),
+                            artifact_id=product.platform_product_id)
+            
+            # Extract species data from deterministic results
+            if 'species' in deterministic_results:
+                species_result = deterministic_results['species']
+                if species_result.get('success') and species_result.get('result_data'):
+                    species_data = species_result['result_data']
+                    if species_data.get('species'):
+                        normalized_data['bean_species'] = species_data['species']
+                        logger.debug("Species data extracted", 
+                                    species=species_data['species'],
+                                    confidence=species_data.get('confidence'),
+                                    artifact_id=product.platform_product_id)
+                    else:
+                        logger.debug("Species result successful but no species detected", 
+                                    species_data=species_data,
+                                    artifact_id=product.platform_product_id)
+                else:
+                    logger.debug("Species result not successful or missing data", 
+                                success=species_result.get('success'),
+                                has_result_data=bool(species_result.get('result_data')),
+                                artifact_id=product.platform_product_id)
+            else:
+                logger.debug("No species result in deterministic results", 
+                            available_keys=list(deterministic_results.keys()),
+                            artifact_id=product.platform_product_id)
+            
+            # Extract process data from deterministic results
+            if 'process' in deterministic_results:
+                process_result = deterministic_results['process']
+                if process_result.get('success') and process_result.get('result_data'):
+                    process_data = process_result['result_data']
+                    if process_data.get('enum_value'):
+                        normalized_data['process_method'] = process_data['enum_value']
+                        logger.debug("Process data extracted", 
+                                    process_method=process_data['enum_value'],
+                                    confidence=process_data.get('confidence'),
+                                    artifact_id=product.platform_product_id)
+                    else:
+                        logger.debug("Process result successful but no process method detected", 
+                                    process_data=process_data,
+                                    artifact_id=product.platform_product_id)
+                else:
+                    logger.debug("Process result not successful or missing data", 
+                                success=process_result.get('success'),
+                                has_result_data=bool(process_result.get('result_data')),
+                                artifact_id=product.platform_product_id)
+            else:
+                logger.debug("No process result in deterministic results", 
+                            available_keys=list(deterministic_results.keys()),
+                            artifact_id=product.platform_product_id)
+            
+            # Extract text cleaning data from deterministic results
+            if 'text_cleaning' in deterministic_results:
+                text_cleaning_result = deterministic_results['text_cleaning']
+                if text_cleaning_result.get('success') and text_cleaning_result.get('result_data'):
+                    text_cleaning_data = text_cleaning_result['result_data']
+                    normalized_data['text_cleaning'] = text_cleaning_data
+                    logger.debug("Text cleaning data extracted", 
+                                title_cleaned=text_cleaning_data.get('title_cleaned'),
+                                description_cleaned=text_cleaning_data.get('description_cleaned'),
+                                confidence=text_cleaning_data.get('title_confidence', 0),
+                                artifact_id=product.platform_product_id)
+                else:
+                    logger.debug("Text cleaning result not successful or missing data", 
+                                success=text_cleaning_result.get('success'),
+                                has_result_data=bool(text_cleaning_result.get('result_data')),
+                                artifact_id=product.platform_product_id)
+            else:
+                logger.debug("No text cleaning result in deterministic results", 
+                            available_keys=list(deterministic_results.keys()),
+                            artifact_id=product.platform_product_id)
+            
+            # Extract text normalization data from deterministic results
+            if 'text_normalization' in deterministic_results:
+                text_normalization_result = deterministic_results['text_normalization']
+                if text_normalization_result.get('success') and text_normalization_result.get('result_data'):
+                    text_normalization_data = text_normalization_result['result_data']
+                    normalized_data['text_normalization'] = text_normalization_data
+                    logger.debug("Text normalization data extracted", 
+                                title_normalized=text_normalization_data.get('title_normalized'),
+                                description_normalized=text_normalization_data.get('description_normalized'),
+                                confidence=text_normalization_data.get('title_confidence', 0),
+                                artifact_id=product.platform_product_id)
+                else:
+                    logger.debug("Text normalization result not successful or missing data", 
+                                success=text_normalization_result.get('success'),
+                                has_result_data=bool(text_normalization_result.get('result_data')),
+                                artifact_id=product.platform_product_id)
+            else:
+                logger.debug("No text normalization result in deterministic results", 
+                            available_keys=list(deterministic_results.keys()),
+                            artifact_id=product.platform_product_id)
+            
+            # Extract roast level data from deterministic results
+            if 'roast' in deterministic_results:
+                roast_result = deterministic_results['roast']
+                if roast_result.get('success') and roast_result.get('result_data'):
+                    roast_data = roast_result['result_data']
+                    if roast_data.get('roast_level'):
+                        normalized_data['roast_level'] = roast_data['roast_level']
+                        logger.debug("Roast level data extracted", 
+                                    roast_level=roast_data['roast_level'],
+                                    confidence=roast_data.get('confidence'),
+                                    artifact_id=product.platform_product_id)
+                    else:
+                        logger.debug("Roast result successful but no roast level detected", 
+                                    roast_data=roast_data,
+                                    artifact_id=product.platform_product_id)
+                else:
+                    logger.debug("Roast result not successful or missing data", 
+                                success=roast_result.get('success'),
+                                has_result_data=bool(roast_result.get('result_data')),
+                                artifact_id=product.platform_product_id)
+            else:
+                logger.debug("No roast result in deterministic results", 
+                            available_keys=list(deterministic_results.keys()),
+                            artifact_id=product.platform_product_id)
             
             # Log pipeline processing results
             if pipeline_warnings:
@@ -341,25 +485,44 @@ class ArtifactMapper:
             # Fallback to legacy parsing
             return self._map_coffee_data_legacy(artifact, roaster_id)
         
-        # Map required fields using pipeline results
+        # Map required fields using pipeline results, with fallback to pre-normalized data
         coffee_payload = {
             'p_bean_species': normalized_data.get('bean_species'),
             'p_name': normalized_data.get('coffee_name', product.title),
             'p_slug': self._map_coffee_slug(product),
             'p_roaster_id': roaster_id,
-            'p_process': normalized_data.get('process_method'),
-            'p_process_raw': normalized_data.get('process_method_raw'),
-            'p_roast_level': normalized_data.get('roast_level'),
-            'p_roast_level_raw': normalized_data.get('roast_level_raw'),
+            'p_process': normalized_data.get('process_method') or self._map_process(artifact.normalization),
+            'p_process_raw': normalized_data.get('process_method_raw') or self._map_process_raw(artifact.normalization),
+            'p_roast_level': normalized_data.get('roast_level') or self._map_roast_level(artifact.normalization),
+            'p_roast_level_raw': normalized_data.get('roast_level_raw') or self._map_roast_level_raw(artifact.normalization),
             'p_roast_style_raw': normalized_data.get('roast_style_raw'),
             'p_description_md': normalized_data.get('description_cleaned', product.description_html),
             'p_direct_buy_url': product.source_url,
             'p_platform_product_id': product.platform_product_id
         }
         
-        # Map cleaned text fields (Epic C.7)
-        coffee_payload['p_title_cleaned'] = normalized_data.get('title_cleaned', product.title)
-        coffee_payload['p_description_cleaned'] = normalized_data.get('description_cleaned', product.description_html)
+        # Map cleaned text fields (Epic C.7) from text cleaning and normalization parser results
+        text_cleaning_result = normalized_data.get('text_cleaning', {})
+        text_normalization_result = normalized_data.get('text_normalization', {})
+        
+        if text_cleaning_result and text_normalization_result:
+            # Use normalized text (which is applied to cleaned text) for best results
+            # This gives us HTML removal + smart quotes conversion
+            coffee_payload['p_title_cleaned'] = text_normalization_result.get('title_normalized', product.title)
+            coffee_payload['p_description_cleaned'] = text_normalization_result.get('description_normalized', product.description_html)
+        elif text_cleaning_result:
+            # Use cleaned text (HTML removed) as the primary source
+            coffee_payload['p_title_cleaned'] = text_cleaning_result.get('title_cleaned', product.title)
+            coffee_payload['p_description_cleaned'] = text_cleaning_result.get('description_cleaned', product.description_html)
+        elif text_normalization_result:
+            # Use normalized text if cleaning not available (but this still has HTML)
+            coffee_payload['p_title_cleaned'] = text_normalization_result.get('title_normalized', product.title)
+            coffee_payload['p_description_cleaned'] = text_normalization_result.get('description_normalized', product.description_html)
+        else:
+            # Fallback to original text with basic HTML conversion if neither cleaning nor normalization available
+            # Apply basic HTML conversion for consistency
+            coffee_payload['p_title_cleaned'] = self._basic_html_to_text(product.title)
+            coffee_payload['p_description_cleaned'] = self._basic_html_to_text(product.description_html or '')
         
         # Map optional fields from pipeline results
         if normalized_data.get('bean_species'):
@@ -399,14 +562,13 @@ class ArtifactMapper:
         # Map sensory data from pipeline results
         if normalized_data.get('sensory_data'):
             sensory_data = normalized_data['sensory_data']
-            if sensory_data.get('acidity') is not None:
-                coffee_payload['p_acidity'] = sensory_data['acidity']
-            if sensory_data.get('body') is not None:
-                coffee_payload['p_body'] = sensory_data['body']
+            # Always include sensory parameters, even if None
+            coffee_payload['p_acidity'] = sensory_data.get('acidity')
+            coffee_payload['p_body'] = sensory_data.get('body')
         
         # Map hash data from pipeline results
-        if normalized_data.get('content_hash'):
-            coffee_payload['p_content_hash'] = normalized_data['content_hash']
+        coffee_payload['p_content_hash'] = normalized_data.get('content_hash', 'unknown')
+        coffee_payload['p_raw_hash'] = normalized_data.get('raw_hash', 'unknown')
         
         # Map default grind from variant grind data
         default_grind = self._determine_default_grind(artifact.product.variants)
@@ -586,7 +748,7 @@ class ArtifactMapper:
         """
         if not self.grind_brewing_parser or not variants:
             return None
-        
+    
         grind_counts = {}
         grind_confidence = {}
         
@@ -622,7 +784,7 @@ class ArtifactMapper:
         
         if not grind_counts:
             return None
-        
+    
         # Priority 1: If "whole" bean is available, use it (highest priority)
         if 'whole' in grind_counts:
             return 'whole'
@@ -1053,43 +1215,8 @@ class ArtifactMapper:
         # Use original title as base
         title = product.title
         
-        # Apply text cleaning if service is available
-        if self.integration_service and self.integration_service.text_cleaning_service:
-            try:
-                cleaning_result = self.integration_service.text_cleaning_service.clean_text(title)
-                title = cleaning_result.cleaned_text
-                logger.debug(
-                    "Applied text cleaning to coffee name",
-                    original=product.title,
-                    cleaned=title,
-                    confidence=cleaning_result.confidence,
-                    changes=cleaning_result.changes_made
-                )
-            except Exception as e:
-                logger.warning(
-                    "Text cleaning failed for coffee name, using original",
-                    title=title,
-                    error=str(e)
-                )
-        
-        # Apply text normalization if service is available
-        if self.integration_service and self.integration_service.text_normalization_service:
-            try:
-                normalization_result = self.integration_service.text_normalization_service.normalize_text(title)
-                title = normalization_result.normalized_text
-                logger.debug(
-                    "Applied text normalization to coffee name",
-                    original=product.title,
-                    normalized=title,
-                    confidence=normalization_result.confidence,
-                    changes=normalization_result.changes_made
-                )
-            except Exception as e:
-                logger.warning(
-                    "Text normalization failed for coffee name, using cleaned text",
-                    title=title,
-                    error=str(e)
-                )
+        # Text cleaning and normalization are handled by C.8 pipeline
+        # Legacy path uses original title without individual text processing
         
         return title
     
@@ -1148,45 +1275,38 @@ class ArtifactMapper:
         else:
             return 'No description available'
         
-        # Apply text cleaning if service is available
-        if self.integration_service and self.integration_service.text_cleaning_service:
-            try:
-                cleaning_result = self.integration_service.text_cleaning_service.clean_text(description)
-                description = cleaning_result.cleaned_text
-                logger.debug(
-                    "Applied text cleaning to description",
-                    original=product.description_md or product.description_html,
-                    cleaned=description,
-                    confidence=cleaning_result.confidence,
-                    changes=cleaning_result.changes_made
-                )
-            except Exception as e:
-                logger.warning(
-                    "Text cleaning failed for description, using original",
-                    description=description,
-                    error=str(e)
-                )
-        
-        # Apply text normalization if service is available
-        if self.integration_service and self.integration_service.text_normalization_service:
-            try:
-                normalization_result = self.integration_service.text_normalization_service.normalize_text(description)
-                description = normalization_result.normalized_text
-                logger.debug(
-                    "Applied text normalization to description",
-                    original=product.description_md or product.description_html,
-                    normalized=description,
-                    confidence=normalization_result.confidence,
-                    changes=normalization_result.changes_made
-                )
-            except Exception as e:
-                logger.warning(
-                    "Text normalization failed for description, using cleaned text",
-                    description=description,
-                    error=str(e)
-                )
+        # Text cleaning and normalization are handled by C.8 pipeline
+        # Legacy path uses original description without individual text processing
         
         return description
+    
+    def _parse_grind_for_pipeline(self, variant: VariantModel) -> Optional[str]:
+        """Parse grind type for pipeline processing using C.4a grind/brewing parser."""
+        if not self.grind_brewing_parser:
+            return None
+    
+        try:
+            # Convert variant to dict format for parser
+            variant_dict = {
+                'title': variant.title or '',
+                'options': variant.options or [],
+                'attributes': getattr(variant, 'attributes', [])
+            }
+            
+            grind_result = self.grind_brewing_parser.parse_grind_brewing(variant_dict)
+            
+            if grind_result.grind_type != 'unknown':
+                return grind_result.grind_type
+            
+            return None
+    
+        except Exception as e:
+            logger.warning(
+                "Failed to parse grind for pipeline",
+                platform_variant_id=variant.platform_variant_id,
+                error=str(e)
+            )
+            return None
     
     def _map_weight_grams(self, variant: VariantModel) -> int:
         """Map variant weight to grams using enhanced weight parser."""
@@ -1245,7 +1365,7 @@ class ArtifactMapper:
         """Map grind type from variant options."""
         if not options:
             return None
-        
+    
         # Look for grind-related options
         grind_keywords = ['whole', 'ground', 'espresso', 'filter', 'coarse', 'fine']
         for option in options:
@@ -1303,7 +1423,7 @@ class ArtifactMapper:
         """Build notes_raw JSON from normalization data."""
         if not normalization:
             return None
-        
+    
         notes_data = {}
         
         # Add LLM enrichment data
@@ -1394,7 +1514,7 @@ class ArtifactMapper:
         try:
             if not self.tag_normalization_service:
                 return None
-            
+    
             # Extract tags from product data
             raw_tags = []
             
@@ -1420,7 +1540,7 @@ class ArtifactMapper:
             
             if not raw_tags:
                 return None
-            
+    
             # Normalize tags using the service
             result = self.tag_normalization_service.normalize_tags(raw_tags)
             
@@ -1460,7 +1580,7 @@ class ArtifactMapper:
         try:
             if not self.notes_extraction_service:
                 return None
-            
+    
             # Combine all description sources
             description_text = ""
             
@@ -1472,7 +1592,7 @@ class ArtifactMapper:
             
             if not description_text.strip():
                 return None
-            
+    
             # Extract notes using the service
             result = self.notes_extraction_service.extract_notes(description_text)
             
@@ -1507,7 +1627,7 @@ class ArtifactMapper:
         try:
             if not self.integration_service or not self.integration_service.variety_parser:
                 return None
-            
+    
             # Combine all description sources
             description_text = ""
             
@@ -1519,7 +1639,7 @@ class ArtifactMapper:
             
             if not description_text.strip():
                 return None
-            
+    
             # Extract varieties using the service
             result = self.integration_service.variety_parser.extract_varieties(description_text)
             
@@ -1554,7 +1674,7 @@ class ArtifactMapper:
         try:
             if not self.integration_service or not self.integration_service.geographic_parser:
                 return None
-            
+    
             # Combine all description sources
             description_text = ""
             
@@ -1566,7 +1686,7 @@ class ArtifactMapper:
             
             if not description_text.strip():
                 return None
-            
+    
             # Extract geographic data using the service
             result = self.integration_service.geographic_parser.parse_geographic(description_text)
             
@@ -1619,7 +1739,7 @@ class ArtifactMapper:
         try:
             if not self.integration_service or not self.integration_service.sensory_parser:
                 return None
-            
+    
             # Combine all description sources
             description_text = ""
             
@@ -1631,7 +1751,7 @@ class ArtifactMapper:
             
             if not description_text.strip():
                 return None
-            
+    
             # Parse sensory parameters
             result = self.integration_service.sensory_parser.parse_sensory(description_text)
             
@@ -1673,7 +1793,7 @@ class ArtifactMapper:
         try:
             if not self.integration_service or not self.integration_service.hash_service:
                 return None
-            
+    
             # Convert artifact to dictionary for hash generation
             artifact_dict = {
                 'title': artifact.product.name,
@@ -1711,4 +1831,27 @@ class ArtifactMapper:
                 error=str(e)
             )
             return None
+    
+    def _basic_html_to_text(self, html_text: str) -> str:
+        """Convert HTML to plain text using basic regex patterns for fallback."""
+        if not html_text:
+            return html_text
+        
+        import re
+        
+        # Remove HTML tags
+        text = re.sub(r'<[^>]+>', '', html_text)
+        
+        # Decode common HTML entities
+        text = text.replace('&amp;', '&')
+        text = text.replace('&lt;', '<')
+        text = text.replace('&gt;', '>')
+        text = text.replace('&quot;', '"')
+        text = text.replace('&#39;', "'")
+        text = text.replace('&nbsp;', ' ')
+        
+        # Normalize whitespace
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        return text
     

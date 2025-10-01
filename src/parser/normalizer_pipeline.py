@@ -307,6 +307,14 @@ class NormalizerPipelineService:
                     results[parser_name] = result
                     state.add_parser_result(parser_name, result)
                     
+                    # Update artifact with intermediate results for sequential processing
+                    if parser_name == 'text_cleaning' and result.success and result.result_data:
+                        # Update artifact with cleaned text for next parsers
+                        if 'title_cleaned' in result.result_data:
+                            artifact['title_cleaned'] = result.result_data['title_cleaned']
+                        if 'description_cleaned' in result.result_data:
+                            artifact['description_cleaned'] = result.result_data['description_cleaned']
+                    
                     # Record parser metrics
                     if self.metrics:
                         self.metrics.record_parser_success(
@@ -346,52 +354,251 @@ class NormalizerPipelineService:
         
         return results
     
+    def _extract_confidence(self, result: Any) -> float:
+        """Extract confidence score from different result object types."""
+        # Handle different confidence field types
+        if hasattr(result, 'confidence'):
+            confidence = result.confidence
+            if isinstance(confidence, str):
+                # Convert string confidence to float
+                confidence_map = {'high': 0.9, 'medium': 0.6, 'low': 0.3}
+                return confidence_map.get(confidence.lower(), 0.5)
+            elif isinstance(confidence, (int, float)):
+                return float(confidence)
+        
+        # Handle confidence_scores (List[float] or Dict[str, float])
+        if hasattr(result, 'confidence_scores'):
+            confidence_scores = result.confidence_scores
+            if isinstance(confidence_scores, list) and confidence_scores:
+                return float(sum(confidence_scores) / len(confidence_scores))
+            elif isinstance(confidence_scores, dict) and confidence_scores:
+                return float(sum(confidence_scores.values()) / len(confidence_scores))
+        
+        # Default confidence if no confidence field found
+        return 0.5
+    
     def _execute_parser(self, parser: Any, parser_name: str, artifact: Dict) -> ParserResult:
         """Execute individual parser with timing and error handling."""
         start_time = time.time()
         
         try:
-            # Execute parser based on type
+            # Execute parser based on type with correct method signatures
             if parser_name == 'weight':
                 result = parser.parse_weight(artifact.get('title', '') + ' ' + artifact.get('description', ''))
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
                 return ParserResult(
                     parser_name=parser_name,
-                    success=result.confidence > 0.0,
-                    confidence=result.confidence,
+                    success=confidence > 0.0,
+                    confidence=confidence,
                     result_data=result.to_dict(),
-                    warnings=result.parsing_warnings,
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
                     execution_time=time.time() - start_time
                 )
             elif parser_name == 'roast':
                 result = parser.parse_roast_level(artifact.get('title', '') + ' ' + artifact.get('description', ''))
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
                 return ParserResult(
                     parser_name=parser_name,
-                    success=result.confidence > 0.0,
-                    confidence=result.confidence,
+                    success=confidence > 0.0,
+                    confidence=confidence,
                     result_data=result.to_dict(),
-                    warnings=result.parsing_warnings,
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
                     execution_time=time.time() - start_time
                 )
             elif parser_name == 'process':
                 result = parser.parse_process_method(artifact.get('title', '') + ' ' + artifact.get('description', ''))
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
                 return ParserResult(
                     parser_name=parser_name,
-                    success=result.confidence > 0.0,
-                    confidence=result.confidence,
+                    success=confidence > 0.0,
+                    confidence=confidence,
                     result_data=result.to_dict(),
-                    warnings=result.parsing_warnings,
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
                     execution_time=time.time() - start_time
                 )
-            # Add other parsers as needed...
-            else:
-                # Generic parser execution
-                result = parser.parse(artifact)
+            elif parser_name == 'tags':
+                # TagNormalizationService.normalize_tags() expects List[str]
+                raw_tags = artifact.get('tags', [])
+                if isinstance(raw_tags, str):
+                    raw_tags = [raw_tags]
+                result = parser.normalize_tags(raw_tags)
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
                 return ParserResult(
                     parser_name=parser_name,
-                    success=True,
-                    confidence=0.8,  # Default confidence
-                    result_data=result.to_dict() if hasattr(result, 'to_dict') else {},
-                    warnings=[],
+                    success=confidence > 0.0,
+                    confidence=confidence,
+                    result_data=result.to_dict(),
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'notes':
+                result = parser.extract_notes(artifact.get('description', ''))
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=confidence > 0.0,
+                    confidence=confidence,
+                    result_data=result.to_dict(),
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'grind':
+                # GrindBrewingParser.parse_grind_brewing() expects variant Dict
+                variant = artifact.get('variants', [{}])[0] if artifact.get('variants') else {}
+                result = parser.parse_grind_brewing(variant)
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=confidence > 0.0,
+                    confidence=confidence,
+                    result_data=result.to_dict(),
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'species':
+                result = parser.parse_species(artifact.get('title', ''), artifact.get('description', ''))
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=confidence > 0.0,
+                    confidence=confidence,
+                    result_data=result.to_dict(),
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'variety':
+                result = parser.extract_varieties(artifact.get('description', ''))
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=confidence > 0.0,
+                    confidence=confidence,
+                    result_data=result.to_dict(),
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'geographic':
+                result = parser.parse_geographic(artifact.get('description', ''))
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=confidence > 0.0,
+                    confidence=confidence,
+                    result_data=result.to_dict(),
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'sensory':
+                result = parser.parse_sensory(artifact.get('description', ''))
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=confidence > 0.0,
+                    confidence=confidence,
+                    result_data=result.to_dict(),
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'hash':
+                # ContentHashService.generate_hashes() expects artifact Dict
+                result = parser.generate_hashes(artifact)
+                # Handle different confidence field types
+                confidence = self._extract_confidence(result)
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=confidence > 0.0,
+                    confidence=confidence,
+                    result_data=result.to_dict(),
+                    warnings=getattr(result, 'parsing_warnings', getattr(result, 'warnings', [])),
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'text_cleaning':
+                # Process both title and description for text cleaning
+                title_text = artifact.get('title', '')
+                description_text = artifact.get('description', '')
+                
+                # Clean title
+                title_result = parser.clean_text(title_text)
+                # Clean description  
+                description_result = parser.clean_text(description_text)
+                
+                # Combine results
+                combined_result = {
+                    'title_cleaned': title_result.cleaned_text,
+                    'description_cleaned': description_result.cleaned_text,
+                    'title_confidence': title_result.confidence,
+                    'description_confidence': description_result.confidence,
+                    'title_changes': title_result.changes_made,
+                    'description_changes': description_result.changes_made,
+                    'title_warnings': title_result.warnings,
+                    'description_warnings': description_result.warnings
+                }
+                
+                # Use average confidence
+                avg_confidence = (title_result.confidence + description_result.confidence) / 2
+                
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=avg_confidence > 0.0,
+                    confidence=avg_confidence,
+                    result_data=combined_result,
+                    warnings=title_result.warnings + description_result.warnings,
+                    execution_time=time.time() - start_time
+                )
+            elif parser_name == 'text_normalization':
+                # Process both title and description for text normalization
+                # Use cleaned text if available from text cleaning, otherwise use original
+                # Check if we have cleaned text from previous text cleaning parser
+                title_text = artifact.get('title_cleaned', artifact.get('title', ''))
+                description_text = artifact.get('description_cleaned', artifact.get('description', ''))
+                
+                # Normalize title
+                title_result = parser.normalize_text(title_text)
+                # Normalize description
+                description_result = parser.normalize_text(description_text)
+                
+                # Combine results
+                combined_result = {
+                    'title_normalized': title_result.normalized_text,
+                    'description_normalized': description_result.normalized_text,
+                    'title_confidence': title_result.confidence,
+                    'description_confidence': description_result.confidence,
+                    'title_changes': title_result.changes_made,
+                    'description_changes': description_result.changes_made,
+                    'title_warnings': title_result.warnings,
+                    'description_warnings': description_result.warnings
+                }
+                
+                # Use average confidence
+                avg_confidence = (title_result.confidence + description_result.confidence) / 2
+                
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=avg_confidence > 0.0,
+                    confidence=avg_confidence,
+                    result_data=combined_result,
+                    warnings=title_result.warnings + description_result.warnings,
+                    execution_time=time.time() - start_time
+                )
+            else:
+                # Fallback for unknown parsers
+                logger.warning("Unknown parser type", parser=parser_name)
+                return ParserResult(
+                    parser_name=parser_name,
+                    success=False,
+                    confidence=0.0,
+                    result_data={},
+                    warnings=[f"Unknown parser type: {parser_name}"],
                     execution_time=time.time() - start_time
                 )
                 

@@ -219,27 +219,27 @@ ps aux --sort=-%mem | head -10
 ## Emergency Contacts
 
 ### Primary On-Call
-- **Name**: [To be filled by team]
-- **Phone**: [To be filled by team]
-- **Slack**: @[username]
-- **Email**: [email]
+- **Name**: System Owner
+- **Phone**: +91 7042683727
+- **Slack**: @system-owner
+- **Email**: gta3lok.ai@gmail.com
 
 ### Secondary On-Call
-- **Name**: [To be filled by team]
-- **Phone**: [To be filled by team]
-- **Slack**: @[username]
-- **Email**: [email]
+- **Name**: System Owner (Backup)
+- **Phone**: +91 7042683727
+- **Slack**: @system-owner
+- **Email**: gta3lok.ai@gmail.com
 
 ### Engineering Manager
-- **Name**: [To be filled by team]
-- **Phone**: [To be filled by team]
-- **Slack**: @[username]
-- **Email**: [email]
+- **Name**: System Owner
+- **Phone**: +91 7042683727
+- **Slack**: @system-owner
+- **Email**: gta3lok.ai@gmail.com
 
 ### Escalation Contacts
-- **CTO**: [Name] - [Phone]
-- **DevOps Lead**: [Name] - [Phone]
-- **Database Admin**: [Name] - [Phone]
+- **CTO**: System Owner - +91 7042683727
+- **DevOps Lead**: System Owner - +91 7042683727
+- **Database Admin**: System Owner - +91 7042683727
 
 ## Post-Incident Procedures
 

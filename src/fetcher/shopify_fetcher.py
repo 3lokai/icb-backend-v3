@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
 
 from structlog import get_logger
+from .encoding_utils import safe_decode_json
 
 from .base_fetcher import BaseFetcher, FetcherConfig
 
@@ -103,7 +104,7 @@ class ShopifyFetcher(BaseFetcher):
             )
             
             if status_code == 200:
-                data = json.loads(content.decode('utf-8'))
+                data = safe_decode_json(content)
                 products = data.get('products', [])
                 
                 logger.info(
@@ -208,7 +209,7 @@ class ShopifyFetcher(BaseFetcher):
                 )
                 
                 if status_code == 200:
-                    data = json.loads(content.decode('utf-8'))
+                    data = safe_decode_json(content)
                     products = data.get('products', [])
                     
                     if not products:
@@ -282,7 +283,7 @@ class ShopifyFetcher(BaseFetcher):
             )
             
             if status_code == 200:
-                data = json.loads(content.decode('utf-8'))
+                data = safe_decode_json(content)
                 # Shopify doesn't provide total count in the response
                 # We'd need to make a separate API call to get this
                 # For now, return the count of products in the first page
@@ -368,7 +369,7 @@ class ShopifyFetcher(BaseFetcher):
             )
             
             if status_code == 200:
-                data = json.loads(content.decode('utf-8'))
+                data = safe_decode_json(content)
                 products = data.get('products', [])
                 
                 # Filter to only include products with variants

@@ -23,6 +23,15 @@ class HashResult(BaseModel):
     algorithm: str = Field(description="Hash algorithm used")
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Generation timestamp")
     
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert result to dictionary."""
+        return {
+            "content_hash": self.content_hash,
+            "raw_hash": self.raw_hash,
+            "algorithm": self.algorithm,
+            "generated_at": self.generated_at.isoformat()
+        }
+    
     class Config:
         """Pydantic configuration."""
         json_encoders = {

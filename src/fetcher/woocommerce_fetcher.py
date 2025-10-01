@@ -9,6 +9,7 @@ from urllib.parse import urljoin
 import base64
 
 from structlog import get_logger
+from .encoding_utils import safe_decode_json
 
 from .base_fetcher import BaseFetcher, FetcherConfig
 
@@ -115,7 +116,7 @@ class WooCommerceFetcher(BaseFetcher):
             )
             
             if status_code == 200:
-                products = json.loads(content.decode('utf-8'))
+                products = safe_decode_json(content)
                 
                 logger.info(
                     "Fetched WooCommerce products",
@@ -261,7 +262,7 @@ class WooCommerceFetcher(BaseFetcher):
                         pass
                 
                 # Fallback: count products in response
-                products = json.loads(content.decode('utf-8'))
+                products = safe_decode_json(content)
                 return len(products)
             
             return 0
@@ -343,7 +344,7 @@ class WooCommerceFetcher(BaseFetcher):
             )
             
             if status_code == 200:
-                products = json.loads(content.decode('utf-8'))
+                products = safe_decode_json(content)
                 
                 # Filter to only include products with variations
                 price_only_products = []

@@ -31,6 +31,17 @@ class TextCleaningResult(BaseModel):
     warnings: List[str] = Field(default_factory=list, description="Warnings about cleaning")
     processing_time_ms: float = Field(description="Processing time in milliseconds")
     
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert result to dictionary."""
+        return {
+            "original_text": self.original_text,
+            "cleaned_text": self.cleaned_text,
+            "changes_made": self.changes_made,
+            "confidence": self.confidence,
+            "warnings": self.warnings,
+            "processing_time_ms": self.processing_time_ms
+        }
+    
     class Config:
         """Pydantic configuration."""
         extra = "forbid"

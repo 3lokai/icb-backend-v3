@@ -189,6 +189,7 @@ class TestValidatorIntegrationServiceRoastProcess:
         # Create validation result with problematic roast data
         validation_result = self.create_test_validation_result()
         validation_result.artifact_data['normalization']['roast_level_raw'] = "Invalid Roast Format"
+        validation_result.artifact_data['normalization']['roast_level_enum'] = None  # Clear the enum to test fallback
         
         # Convert artifact_data back to ArtifactModel for testing
         artifact = ArtifactModel(**validation_result.artifact_data)
@@ -205,15 +206,16 @@ class TestValidatorIntegrationServiceRoastProcess:
             metadata_only=False
         )
         
-        # Should fallback to enum value
+        # Should fallback to None when parsing fails
         coffee_payload = rpc_payloads['coffee']
-        assert coffee_payload['p_roast_level'] == 'medium'  # Fallback to enum
+        assert coffee_payload['p_roast_level'] is None  # Fallback to None
     
     def test_process_parser_fallback_handling(self):
         """Test process parser fallback when parser fails."""
         # Create validation result with problematic process data
         validation_result = self.create_test_validation_result()
         validation_result.artifact_data['normalization']['process_raw'] = "Invalid Process Format"
+        validation_result.artifact_data['normalization']['process_enum'] = None  # Clear the enum to test fallback
         
         # Convert artifact_data back to ArtifactModel for testing
         artifact = ArtifactModel(**validation_result.artifact_data)
@@ -230,9 +232,9 @@ class TestValidatorIntegrationServiceRoastProcess:
             metadata_only=False
         )
         
-        # Should fallback to enum value
+        # Should fallback to None when parsing fails
         coffee_payload = rpc_payloads['coffee']
-        assert coffee_payload['p_process'] == 'washed'  # Fallback to enum
+        assert coffee_payload['p_process'] is None  # Fallback to None
     
     def test_missing_roast_process_data_handling(self):
         """Test handling of missing roast and process data."""

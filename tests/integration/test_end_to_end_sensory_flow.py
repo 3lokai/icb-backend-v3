@@ -207,8 +207,9 @@ class TestEndToEndSensoryFlow:
         # Mock product with sensory description
         mock_product = Mock()
         mock_product.name = "High Acidity Coffee"
+        mock_product.title = "High Acidity Coffee"
         mock_product.description_md = "This coffee has high acidity and full body with bright citrus notes and sweet caramel flavors"
-        mock_product.description_html = None
+        mock_product.description_html = "This coffee has high acidity and full body with bright citrus notes and sweet caramel flavors"
         mock_product.platform_product_id = "test-123"
         mock_product.source_url = "https://example.com/coffee"
         
@@ -229,5 +230,20 @@ class TestEndToEndSensoryFlow:
         # Set up artifact
         mock_artifact.product = mock_product
         mock_artifact.normalization = mock_normalization
+        mock_artifact.description = "This coffee has high acidity and full body with bright citrus notes and sweet caramel flavors"
+        
+        # Make artifact behave like a dictionary for parsers
+        def artifact_get(key, default=None):
+            if key == 'description':
+                return "This coffee has high acidity and full body with bright citrus notes and sweet caramel flavors"
+            elif key == 'title':
+                return "High Acidity Coffee"
+            elif key == 'variants':
+                return [mock_variant]
+            elif key == 'roaster_id':
+                return "test-roaster"
+            return default
+        
+        mock_artifact.get = artifact_get
         
         return mock_artifact

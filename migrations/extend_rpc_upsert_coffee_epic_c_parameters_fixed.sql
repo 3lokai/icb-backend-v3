@@ -33,7 +33,7 @@ DROP FUNCTION IF EXISTS rpc_upsert_coffee(
     p_roast_level roast_level_enum,
     p_roast_level_raw text,
     p_roast_style_raw text,
-    p_roaster_id text,
+    p_roaster_id uuid,
     p_slug text,
     p_source_raw jsonb,
     p_status coffee_status_enum
@@ -45,7 +45,7 @@ CREATE OR REPLACE FUNCTION rpc_upsert_coffee(
     p_bean_species species_enum,
     p_process process_enum,
     p_roast_level roast_level_enum,
-    p_roaster_id text,
+    p_roaster_id uuid,
     p_platform_product_id text,
     p_name text,
     p_slug text,
@@ -223,52 +223,52 @@ $$;
 COMMENT ON FUNCTION rpc_upsert_coffee IS 'Extended RPC function for Epic C normalization stories. Includes parameters for C.3 (tags/notes), C.4 (grind/species), C.5 (varieties/geographic), C.6 (sensory/hash), and C.7 (text cleaning).';
 
 -- Create indexes for performance on new fields
-CREATE INDEX IF NOT EXISTS idx_coffees_tags ON coffees USING GIN (tags);
-CREATE INDEX IF NOT EXISTS idx_coffees_varieties ON coffees USING GIN (varieties);
-CREATE INDEX IF NOT EXISTS idx_coffees_content_hash ON coffees ((source_raw->>'content_hash'));
-CREATE INDEX IF NOT EXISTS idx_coffees_raw_hash ON coffees ((source_raw->>'raw_hash'));
+-- CREATE INDEX IF NOT EXISTS idx_coffees_tags ON coffees USING GIN (tags);
+-- CREATE INDEX IF NOT EXISTS idx_coffees_varieties ON coffees USING GIN (varieties);
+-- CREATE INDEX IF NOT EXISTS idx_coffees_content_hash ON coffees ((source_raw->>'content_hash'));
+-- CREATE INDEX IF NOT EXISTS idx_coffees_raw_hash ON coffees ((source_raw->>'raw_hash'));
 
 -- Add constraints for data validation
-ALTER TABLE coffees ADD CONSTRAINT chk_acidity_range CHECK (
-    (source_raw->>'acidity')::numeric IS NULL OR 
-    ((source_raw->>'acidity')::numeric >= 1 AND (source_raw->>'acidity')::numeric <= 10)
-);
+-- ALTER TABLE coffees ADD CONSTRAINT chk_acidity_range CHECK (
+--     (source_raw->>'acidity')::numeric IS NULL OR 
+--     ((source_raw->>'acidity')::numeric >= 1 AND (source_raw->>'acidity')::numeric <= 10)
+-- );
 
-ALTER TABLE coffees ADD CONSTRAINT chk_body_range CHECK (
-    (source_raw->>'body')::numeric IS NULL OR 
-    ((source_raw->>'body')::numeric >= 1 AND (source_raw->>'body')::numeric <= 10)
-);
+-- ALTER TABLE coffees ADD CONSTRAINT chk_body_range CHECK (
+--     (source_raw->>'body')::numeric IS NULL OR 
+--     ((source_raw->>'body')::numeric >= 1 AND (source_raw->>'body')::numeric <= 10)
+-- );
 
 -- Grant necessary permissions
-GRANT EXECUTE ON FUNCTION rpc_upsert_coffee TO authenticated;
-GRANT EXECUTE ON FUNCTION rpc_upsert_coffee TO service_role;
+-- GRANT EXECUTE ON FUNCTION rpc_upsert_coffee TO authenticated;
+-- GRANT EXECUTE ON FUNCTION rpc_upsert_coffee TO service_role;
 
 -- Create a helper function to get Epic C parameters from a coffee record
-CREATE OR REPLACE FUNCTION get_epic_c_parameters(p_coffee_id text)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-    v_result jsonb;
-BEGIN
-    SELECT jsonb_build_object(
-        'tags', tags,
-        'varieties', varieties,
-        'content_hash', source_raw->>'content_hash',
-        'raw_hash', source_raw->>'raw_hash',
-        'title_cleaned', seo_title,
-        'description_cleaned', seo_desc
-    ) INTO v_result
-    FROM coffees
-    WHERE id = p_coffee_id;
-    
-    RETURN v_result;
-END;
-$$;
+-- CREATE OR REPLACE FUNCTION get_epic_c_parameters(p_coffee_id text)
+-- RETURNS jsonb
+-- LANGUAGE plpgsql
+-- SECURITY DEFINER
+-- AS $$
+-- DECLARE
+--     v_result jsonb;
+-- BEGIN
+--     SELECT jsonb_build_object(
+--         'tags', tags,
+--         'varieties', varieties,
+--         'content_hash', source_raw->>'content_hash',
+--         'raw_hash', source_raw->>'raw_hash',
+--         'title_cleaned', seo_title,
+--         'description_cleaned', seo_desc
+--     ) INTO v_result
+--     FROM coffees
+--     WHERE id = p_coffee_id;
+--     
+--     RETURN v_result;
+-- END;
+-- $$;
 
-COMMENT ON FUNCTION get_epic_c_parameters IS 'Helper function to retrieve Epic C parameters from a coffee record.';
+-- COMMENT ON FUNCTION get_epic_c_parameters IS 'Helper function to retrieve Epic C parameters from a coffee record.';
 
 -- Grant permissions for the helper function
-GRANT EXECUTE ON FUNCTION get_epic_c_parameters TO authenticated;
-GRANT EXECUTE ON FUNCTION get_epic_c_parameters TO service_role;
+-- GRANT EXECUTE ON FUNCTION get_epic_c_parameters TO authenticated;
+-- GRANT EXECUTE ON FUNCTION get_epic_c_parameters TO service_role;
