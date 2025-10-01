@@ -271,6 +271,7 @@ export type Database = {
           created_at: string
           crop_year: number | null
           decaf: boolean
+          default_grind: Database["public"]["Enums"]["grind_enum"] | null
           description_md: string | null
           direct_buy_url: string | null
           first_seen_at: string | null
@@ -305,6 +306,7 @@ export type Database = {
           created_at?: string
           crop_year?: number | null
           decaf?: boolean
+          default_grind?: Database["public"]["Enums"]["grind_enum"] | null
           description_md?: string | null
           direct_buy_url?: string | null
           first_seen_at?: string | null
@@ -339,6 +341,7 @@ export type Database = {
           created_at?: string
           crop_year?: number | null
           decaf?: boolean
+          default_grind?: Database["public"]["Enums"]["grind_enum"] | null
           description_md?: string | null
           direct_buy_url?: string | null
           first_seen_at?: string | null
@@ -1173,6 +1176,7 @@ export type Database = {
         | "south indian filter"
         | "moka pot"
         | "pour over"
+        | "syphon"
       platform_enum: "shopify" | "woocommerce" | "custom" | "other"
       process_enum:
         | "washed"
@@ -1195,7 +1199,20 @@ export type Database = {
       run_status_enum: "ok" | "partial" | "fail"
       sensory_confidence_enum: "high" | "medium" | "low"
       sensory_source_enum: "roaster" | "icb_inferred" | "icb_manual"
-      species_enum: "arabica" | "robusta" | "liberica" | "blend"
+      species_enum:
+        | "arabica"
+        | "robusta"
+        | "liberica"
+        | "blend"
+        | "arabica_80_robusta_20"
+        | "arabica_70_robusta_30"
+        | "arabica_60_robusta_40"
+        | "arabica_50_robusta_50"
+        | "robusta_80_arabica_20"
+        | "arabica_chicory"
+        | "robusta_chicory"
+        | "blend_chicory"
+        | "filter_coffee_mix"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1355,6 +1372,7 @@ export const Constants = {
         "south indian filter",
         "moka pot",
         "pour over",
+        "syphon",
       ],
       platform_enum: ["shopify", "woocommerce", "custom", "other"],
       process_enum: [
@@ -1380,7 +1398,21 @@ export const Constants = {
       run_status_enum: ["ok", "partial", "fail"],
       sensory_confidence_enum: ["high", "medium", "low"],
       sensory_source_enum: ["roaster", "icb_inferred", "icb_manual"],
-      species_enum: ["arabica", "robusta", "liberica", "blend"],
+      species_enum: [
+        "arabica",
+        "robusta",
+        "liberica",
+        "blend",
+        "arabica_80_robusta_20",
+        "arabica_70_robusta_30",
+        "arabica_60_robusta_40",
+        "arabica_50_robusta_50",
+        "robusta_80_arabica_20",
+        "arabica_chicory",
+        "robusta_chicory",
+        "blend_chicory",
+        "filter_coffee_mix",
+      ],
     },
   },
 } as const

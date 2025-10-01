@@ -37,19 +37,9 @@ Main table storing coffee product information.
 | process | process_enum | Yes | Processing method |
 | process_raw | string | Yes | Raw process text |
 | bean_species | species_enum | Yes | Coffee species |
+| default_grind | grind_enum | Yes | Default grind recommendation |
 | varieties | string[] | Yes | Coffee varieties |
 | tags | string[] | Yes | Product tags |
-| default_grind | grind_enum | Yes | Default grind recommendation |
-| region | string | Yes | Coffee region |
-| country | string | Yes | Coffee country |
-| altitude | number | Yes | Altitude in meters |
-| acidity | number | Yes | Acidity rating (1-10) |
-| body | number | Yes | Body rating (1-10) |
-| flavors | string[] | Yes | Flavor notes |
-| content_hash | string | Yes | Content hash for deduplication |
-| raw_hash | string | Yes | Raw content hash |
-| title_cleaned | string | Yes | Cleaned title |
-| description_cleaned | string | Yes | Cleaned description |
 | rating_avg | number | Yes | Average rating |
 | rating_count | number | No | Number of ratings |
 
@@ -252,6 +242,7 @@ Table storing coffee image information.
 | sort_order | number | No | Sort order |
 | content_hash | string | Yes | Content hash for deduplication |
 | source_raw | Json | Yes | Raw source data |
+| updated_at | string | No | Last update timestamp |
 
 **Relationships:**
 - `coffee_id` → `coffees.id`

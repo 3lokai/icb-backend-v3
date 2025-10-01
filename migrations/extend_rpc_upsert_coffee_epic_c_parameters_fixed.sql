@@ -33,7 +33,7 @@ DROP FUNCTION IF EXISTS rpc_upsert_coffee(
     p_roast_level roast_level_enum,
     p_roast_level_raw text,
     p_roast_style_raw text,
-    p_roaster_id uuid,
+    p_roaster_id text,
     p_slug text,
     p_source_raw jsonb,
     p_status coffee_status_enum
@@ -45,7 +45,7 @@ CREATE OR REPLACE FUNCTION rpc_upsert_coffee(
     p_bean_species species_enum,
     p_process process_enum,
     p_roast_level roast_level_enum,
-    p_roaster_id uuid,
+    p_roaster_id text,
     p_platform_product_id text,
     p_name text,
     p_slug text,
@@ -96,7 +96,7 @@ BEGIN
     SELECT id INTO v_existing_id
     FROM coffees
     WHERE platform_product_id = p_platform_product_id
-    AND roaster_id = p_roaster_id;
+    AND roaster_id = p_roaster_id::uuid;
     
     IF v_existing_id IS NOT NULL THEN
         -- Update existing coffee
@@ -114,8 +114,8 @@ BEGIN
             process = p_process,
             process_raw = p_process_raw,
             bean_species = p_bean_species,
-            notes_raw = p_notes_raw,
-            source_raw = p_source_raw,
+            notes_raw = COALESCE(p_notes_raw, notes_raw),
+            source_raw = COALESCE(p_source_raw, source_raw),
             updated_at = NOW(),
             
             -- Epic C.3: Tags & Notes
@@ -147,10 +147,10 @@ BEGIN
             -- Epic C.7: Text Cleaning
             seo_title, seo_desc
         ) VALUES (
-            gen_random_uuid(), p_name, p_slug, p_roaster_id, p_description_md, p_direct_buy_url,
+            gen_random_uuid(), p_name, p_slug, p_roaster_id::uuid, p_description_md, p_direct_buy_url,
             p_platform_product_id, p_platform_product_id, p_status, p_decaf, p_roast_level,
             p_roast_level_raw, p_roast_style_raw, p_process, p_process_raw, p_bean_species,
-            p_notes_raw, p_source_raw, NOW(), NOW(),
+            COALESCE(p_notes_raw, '{}'::jsonb), COALESCE(p_source_raw, '{}'::jsonb), NOW(), NOW(),
             
             -- Epic C.3: Tags & Notes
             p_tags,

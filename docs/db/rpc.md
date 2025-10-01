@@ -67,18 +67,17 @@ rpc_upsert_coffee(
   p_source_raw?: Json,
   p_status?: coffee_status_enum,
   p_tags?: string[],
-  p_default_grind?: grind_enum,
   p_varieties?: string[],
-  p_region?: string,
-  p_country?: string,
-  p_altitude?: number,
+  p_title_cleaned?: string,
+  p_description_cleaned?: string,
+  p_content_hash?: string,
+  p_raw_hash?: string,
   p_acidity?: number,
   p_body?: number,
   p_flavors?: string[],
-  p_content_hash?: string,
-  p_raw_hash?: string,
-  p_title_cleaned?: string,
-  p_description_cleaned?: string
+  p_region?: string,
+  p_country?: string,
+  p_altitude?: number
 ) -> string
 ```
 Upserts a coffee record and returns the coffee ID. Now includes Epic C normalization parameters for tags, geographic data, sensory parameters, and text cleaning.
