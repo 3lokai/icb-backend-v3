@@ -31,9 +31,11 @@ class PriceFetcher:
         self,
         base_fetcher: BaseFetcher,
         price_parser: Optional[PriceParser] = None,
+        supabase_client=None,
     ):
         self.base_fetcher = base_fetcher
         self.price_parser = price_parser or PriceParser(job_type="price_only")
+        self.supabase_client = supabase_client
         self.roaster_id = base_fetcher.roaster_id
         self.platform = base_fetcher.platform
         self.job_type = base_fetcher.job_type
@@ -280,15 +282,56 @@ class PriceFetcher:
         Returns:
             List of product handles
         """
-        # TODO: Implement actual database query
-        # This is a placeholder for database integration
-        logger.info(
-            "Getting existing product handles",
-            roaster_id=self.roaster_id,
-        )
-        
-        # Placeholder - would query database for existing handles
-        return []
+        try:
+            logger.info(
+                "Getting existing product handles",
+                roaster_id=self.roaster_id,
+            )
+            
+            # Query database for existing product handles
+            if self.supabase_client:
+                # Query coffees table for existing products
+                # We want both platform_product_id and slug, so we don't filter by null platform_product_id
+                result = self.supabase_client.table("coffees").select(
+                    "platform_product_id, slug"
+                ).eq("roaster_id", self.roaster_id).execute()
+                
+                if result.data:
+                    # Extract handles from platform_product_id or slug
+                    handles = []
+                    for coffee in result.data:
+                        # Use platform_product_id as handle, fallback to slug
+                        handle = coffee.get('platform_product_id') or coffee.get('slug')
+                        if handle:
+                            handles.append(handle)
+                    
+                    logger.info(
+                        "Retrieved existing product handles",
+                        roaster_id=self.roaster_id,
+                        handle_count=len(handles)
+                    )
+                    return handles
+                else:
+                    logger.info(
+                        "No existing product handles found",
+                        roaster_id=self.roaster_id
+                    )
+                    return []
+            else:
+                # No database client available - return empty list
+                logger.warning(
+                    "No database client available for product handles",
+                    roaster_id=self.roaster_id
+                )
+                return []
+                
+        except Exception as e:
+            logger.error(
+                "Failed to get existing product handles",
+                roaster_id=self.roaster_id,
+                error=str(e)
+            )
+            return []
     
     async def _fetch_single_product(self, handle: str) -> Optional[Dict[str, Any]]:
         """

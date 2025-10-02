@@ -219,8 +219,9 @@ class TestPriceParser:
             currency='USD',
             in_stock=True,
             sku='TEST-001',
+            old_in_stock=True,  # No availability change
         )
-        
+
         assert delta.variant_id == '12345'
         assert delta.old_price == Decimal('25.99')
         assert delta.new_price == Decimal('29.99')
@@ -229,6 +230,20 @@ class TestPriceParser:
         assert delta.sku == 'TEST-001'
         assert delta.has_price_change() is True
         assert delta.has_availability_change() is False
+        
+        # Test availability change
+        delta_availability_change = PriceDelta(
+            variant_id='12346',
+            old_price=Decimal('25.99'),
+            new_price=Decimal('25.99'),
+            currency='USD',
+            in_stock=True,
+            sku='TEST-002',
+            old_in_stock=False,  # Availability changed
+        )
+        
+        assert delta_availability_change.has_price_change() is False
+        assert delta_availability_change.has_availability_change() is True
     
     def test_price_delta_no_change(self):
         """Test PriceDelta with no changes."""
@@ -264,13 +279,18 @@ class TestPriceParser:
         assert delta_dict['sku'] == 'TEST-001'
         assert 'detected_at' in delta_dict
     
-    def test_currency_normalization_placeholder(self):
-        """Test currency normalization (placeholder implementation)."""
+    def test_currency_normalization(self):
+        """Test currency normalization with actual conversion."""
         price = Decimal('25.99')
         normalized = self.parser.normalize_currency(price, 'EUR', 'USD')
+
+        # Should convert EUR to USD (EUR rate is 0.85, so 25.99 EUR = ~30.58 USD)
+        expected = Decimal('30.58')
+        assert abs(normalized - expected) < Decimal('0.01')  # Allow small rounding differences
         
-        # Currently returns original price (placeholder)
-        assert normalized == price
+        # Test same currency (no conversion)
+        same_currency = self.parser.normalize_currency(price, 'USD', 'USD')
+        assert same_currency == price
     
     def test_performance_metrics(self):
         """Test getting performance metrics."""

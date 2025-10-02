@@ -52,9 +52,10 @@ class EnrichmentData:
 class EnrichmentPersistence:
     """Service for persisting LLM enrichment results regardless of confidence level."""
     
-    def __init__(self, config: Dict[str, Any] = None):
+    def __init__(self, config: Dict[str, Any] = None, rpc_client=None):
         """Initialize enrichment persistence with configuration."""
         self.config = config or {}
+        self.rpc_client = rpc_client
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
         self._enrichment_storage = {}  # In-memory storage for now
     
@@ -170,9 +171,36 @@ class EnrichmentPersistence:
         return f"enrich_{enrichment_data.artifact_id}_{enrichment_data.field}_{timestamp}"
     
     def _store_enrichment(self, enrichment_data: EnrichmentData):
-        """Store enrichment data (placeholder implementation)."""
-        # In a real implementation, this would store to database
-        self._enrichment_storage[enrichment_data.enrichment_id] = enrichment_data
+        """Store enrichment data to database."""
+        try:
+            if not self.rpc_client:
+                # Fallback to in-memory storage if no RPC client
+                self._enrichment_storage[enrichment_data.enrichment_id] = enrichment_data
+                self.logger.warning("No RPC client available, using in-memory storage")
+                return
+            
+            # Store to database using direct table access (simpler than RPC for this case)
+            db_record = {
+                "enrichment_id": enrichment_data.enrichment_id,
+                "artifact_id": enrichment_data.artifact_id,
+                "field": enrichment_data.field,
+                "llm_result": enrichment_data.llm_result.model_dump() if hasattr(enrichment_data.llm_result, 'model_dump') else enrichment_data.llm_result,
+                "confidence_score": enrichment_data.confidence_score,
+                "applied": enrichment_data.evaluation_action == 'auto_apply'
+            }
+            
+            # Use direct table upsert (simpler than RPC for enrichments)
+            result = self.rpc_client.supabase_client.table("enrichments").upsert(db_record).execute()
+            
+            if result.data:
+                self.logger.debug(f"Enrichment stored successfully: {enrichment_data.enrichment_id}")
+            else:
+                self.logger.warning(f"Failed to store enrichment: {enrichment_data.enrichment_id}")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to store enrichment {enrichment_data.enrichment_id}: {str(e)}")
+            # Fallback to in-memory storage
+            self._enrichment_storage[enrichment_data.enrichment_id] = enrichment_data
     
     def _apply_enrichment_to_artifact(self, artifact: Dict, llm_result: LLMResult):
         """Apply high-confidence enrichment to artifact."""

@@ -797,6 +797,125 @@ class RPCClient:
         
         return results
 
+    def upsert_roaster(
+        self,
+        name: str,
+        slug: str,
+        website: str,
+        platform: str,
+        instagram_handle: Optional[str] = None,
+        support_email: Optional[str] = None,
+        social_json: Optional[Dict[str, Any]] = None
+    ) -> str:
+        """
+        Upsert a roaster record and return the roaster ID.
+        
+        Args:
+            name: Roaster name
+            slug: Roaster slug (URL-friendly identifier)
+            website: Roaster website URL
+            platform: Platform type (shopify, woocommerce, custom, other)
+            instagram_handle: Optional Instagram handle
+            support_email: Optional support email
+            social_json: Optional social media JSON data
+            
+        Returns:
+            Roaster ID string
+            
+        Raises:
+            RPCError: If RPC call fails
+        """
+        try:
+            # Prepare parameters for rpc_upsert_roaster
+            parameters = {
+                'p_name': name,
+                'p_slug': slug,
+                'p_website': website,
+                'p_platform': platform
+            }
+            
+            # Add optional parameters if provided
+            if instagram_handle is not None:
+                parameters['p_instagram_handle'] = instagram_handle
+            if support_email is not None:
+                parameters['p_support_email'] = support_email
+            if social_json is not None:
+                parameters['p_social_json'] = social_json
+            
+            # Execute RPC call
+            result = self._execute_rpc_with_retry(
+                'rpc_upsert_roaster',
+                parameters
+            )
+            
+            if result and 'data' in result:
+                roaster_id = result['data']
+                logger.info(
+                    "Roaster upserted successfully",
+                    roaster_id=roaster_id,
+                    name=name,
+                    platform=platform
+                )
+                return roaster_id
+            else:
+                raise RPCError("No roaster ID returned from upsert operation")
+                
+        except Exception as e:
+            logger.error(
+                "Failed to upsert roaster",
+                name=name,
+                platform=platform,
+                error=str(e)
+            )
+            raise
+
+    def update_roaster_platform(self, roaster_id: str, platform: str) -> bool:
+        """
+        Update roaster platform field using direct table update.
+        
+        Args:
+            roaster_id: Roaster ID to update
+            platform: New platform value (shopify, woocommerce, custom, other)
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            logger.info(
+                "Updating roaster platform",
+                roaster_id=roaster_id,
+                platform=platform
+            )
+            
+            # Use direct table update to update the platform field
+            result = self.supabase_client.table("roasters").update(
+                {"platform": platform}
+            ).eq("id", roaster_id).execute()
+            
+            if result.data:
+                logger.info(
+                    "Roaster platform updated successfully",
+                    roaster_id=roaster_id,
+                    platform=platform
+                )
+                return True
+            else:
+                logger.error(
+                    "Failed to update roaster platform - no data returned",
+                    roaster_id=roaster_id,
+                    platform=platform
+                )
+                return False
+                
+        except Exception as e:
+            logger.error(
+                "Failed to update roaster platform",
+                roaster_id=roaster_id,
+                platform=platform,
+                error=str(e)
+            )
+            return False
+
     def reset_stats(self):
         """Reset RPC client statistics."""
         self.rpc_stats = {

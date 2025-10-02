@@ -41,9 +41,12 @@ class RoasterConfigSchema(BaseModel):
         alias=AliasChoices('default_concurrency', 'concurrency')
     )
     
+    # Platform configuration
+    platform: Optional[str] = Field(default=None, description="E-commerce platform (shopify, woocommerce, custom, other)")
+    
     # External service configuration
     use_firecrawl_fallback: bool = Field(default=False, description="Enable Firecrawl fallback")
-    firecrawl_budget_limit: int = Field(default=1000, ge=0, description="Firecrawl budget limit")
+    firecrawl_budget_limit: int = Field(default=10, ge=0, description="Firecrawl budget limit (realistic $5-10 budget)")
     use_llm: bool = Field(default=False, description="Enable LLM enrichment")
     
     # Monitoring and alerting
@@ -117,6 +120,19 @@ class RoasterConfigSchema(BaseModel):
         
         return v
     
+    @field_validator('platform')
+    @classmethod
+    def validate_platform(cls, v):
+        """Validate platform field."""
+        if v is None:
+            return v
+        
+        valid_platforms = ['shopify', 'woocommerce', 'custom', 'other']
+        if v not in valid_platforms:
+            raise ValueError(f"Platform must be one of {valid_platforms}, got: {v}")
+        
+        return v
+    
     @model_validator(mode='after')
     def validate_configuration(self):
         """Validate overall configuration."""
@@ -181,8 +197,9 @@ class RoasterConfigDefaults:
             'full_cadence': '0 3 1 * *',  # Monthly at 3 AM
             'price_cadence': '0 4 * * 0',  # Weekly on Sunday at 4 AM
             'default_concurrency': 3,
+            'platform': None,  # Will be detected automatically
             'use_firecrawl_fallback': False,
-            'firecrawl_budget_limit': 1000,
+            'firecrawl_budget_limit': 5,  # Realistic $5-10 budget
             'use_llm': False,
             'alert_price_delta_pct': 20.0,
             'api_endpoints': {}
@@ -196,8 +213,9 @@ class RoasterConfigDefaults:
             'full_cadence': '0 2 1 * *',  # Earlier in the month
             'price_cadence': '0 3 * * 0',  # Earlier on Sunday
             'default_concurrency': 5,  # Higher concurrency
+            'platform': None,  # Will be detected automatically
             'use_firecrawl_fallback': True,
-            'firecrawl_budget_limit': 2000,
+            'firecrawl_budget_limit': 10,  # Higher budget for high-volume
             'use_llm': True,
             'alert_price_delta_pct': 15.0,  # Lower threshold
             'api_endpoints': {}
@@ -211,8 +229,9 @@ class RoasterConfigDefaults:
             'full_cadence': '0 4 1 * *',  # Later in the month
             'price_cadence': '0 5 * * 0',  # Later on Sunday
             'default_concurrency': 1,  # Lower concurrency
+            'platform': None,  # Will be detected automatically
             'use_firecrawl_fallback': False,
-            'firecrawl_budget_limit': 500,
+            'firecrawl_budget_limit': 3,  # Lower budget for low-volume
             'use_llm': False,
             'alert_price_delta_pct': 30.0,  # Higher threshold
             'api_endpoints': {}

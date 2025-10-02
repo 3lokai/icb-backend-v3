@@ -201,19 +201,68 @@ class ReviewWorkflow:
                 self._send_email_notification(message, {})
     
     def _send_slack_notification(self, message: str):
-        """Send Slack notification (placeholder implementation)."""
-        # This would integrate with Slack webhook
-        self.logger.info(f"Slack notification: {message}")
+        """Send Slack notification for monitoring (not manual review)."""
+        try:
+            if not self.slack_webhook_url:
+                self.logger.warning("Slack webhook URL not configured, skipping notification")
+                return
+            
+            import requests
+            
+            payload = {
+                "text": f"🤖 Coffee Data Processing: {message}",
+                "username": "Coffee Data Bot",
+                "icon_emoji": ":coffee:"
+            }
+            
+            response = requests.post(
+                self.slack_webhook_url,
+                json=payload,
+                timeout=10
+            )
+            
+            if response.status_code == 200:
+                self.logger.debug("Slack notification sent successfully")
+            else:
+                self.logger.warning("Slack notification failed", status_code=response.status_code, response=response.text)
+                
+        except Exception as e:
+            self.logger.error("Failed to send Slack notification", error=str(e))
+            # Fallback to logging
+            self.logger.info(f"Slack notification (fallback): {message}")
     
     def _send_email_notification(self, message: str, artifact: Dict):
         """Send email notification (placeholder implementation)."""
         # This would integrate with email service
         self.logger.info(f"Email notification: {message}")
     
-    def get_pending_reviews(self, limit: int = 50) -> List[ReviewItem]:
-        """Get pending review items (placeholder implementation)."""
-        # This would query the database for pending reviews
-        return []
+    def get_pending_reviews(self, limit: int = 50, rpc_client=None) -> List[ReviewItem]:
+        """Get low-confidence enrichments for monitoring (no manual review needed)."""
+        try:
+            if not rpc_client:
+                return []
+            
+            # Get low-confidence enrichments for monitoring
+            result = rpc_client.supabase_client.table("enrichments").select(
+                "enrichment_id, artifact_id, field, confidence_score, created_at"
+            ).eq("applied", False).order("created_at", desc=True).limit(limit).execute()
+            
+            review_items = []
+            for record in result.data:
+                review_items.append(ReviewItem(
+                    enrichment_id=record["enrichment_id"],
+                    artifact_id=record["artifact_id"],
+                    field=record["field"],
+                    confidence_score=record["confidence_score"],
+                    review_status="monitoring",  # Just for monitoring, not manual review
+                    created_at=record["created_at"]
+                ))
+            
+            return review_items
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get pending reviews: {str(e)}")
+            return []
     
     def get_review_stats(self, review_items: List[ReviewItem]) -> Dict[str, Any]:
         """Get statistics from review items."""

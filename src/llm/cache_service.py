@@ -137,42 +137,192 @@ class MemoryBackend:
 
 
 class RedisBackend:
-    """Redis cache backend (placeholder for future implementation)"""
+    """Redis cache backend implementation"""
     
     def __init__(self, redis_url: str):
         self.redis_url = redis_url
-        # TODO: Initialize Redis connection using redis_url
-        raise NotImplementedError("Redis backend not yet implemented - use memory or database backend")
+        self._client = None
+        self._initialize_client()
+    
+    def _initialize_client(self):
+        """Initialize Redis client connection"""
+        try:
+            import redis.asyncio as redis
+            self._client = redis.from_url(self.redis_url, decode_responses=True)
+            logger.info("Redis client initialized", redis_url=self.redis_url)
+        except ImportError:
+            raise ImportError("Redis package not installed. Install with: pip install redis")
+        except Exception as e:
+            logger.error("Failed to initialize Redis client", error=str(e), redis_url=self.redis_url)
+            raise
     
     async def get(self, key: str) -> Optional[str]:
-        raise NotImplementedError()
+        """Get value from Redis cache"""
+        try:
+            if not self._client:
+                self._initialize_client()
+            value = await self._client.get(key)
+            return value
+        except Exception as e:
+            logger.warning("Redis get failed", key=key, error=str(e))
+            return None
     
     async def set(self, key: str, value: str, ttl: int = 3600):
-        raise NotImplementedError()
+        """Set value in Redis cache with TTL"""
+        try:
+            if not self._client:
+                self._initialize_client()
+            await self._client.setex(key, ttl, value)
+            logger.debug("Redis set successful", key=key, ttl=ttl)
+        except Exception as e:
+            logger.warning("Redis set failed", key=key, error=str(e))
     
     async def delete(self, key: str):
-        raise NotImplementedError()
+        """Delete key from Redis cache"""
+        try:
+            if not self._client:
+                self._initialize_client()
+            await self._client.delete(key)
+            logger.debug("Redis delete successful", key=key)
+        except Exception as e:
+            logger.warning("Redis delete failed", key=key, error=str(e))
     
     async def clear(self, pattern: Optional[str] = None):
-        raise NotImplementedError()
+        """Clear cache entries matching pattern"""
+        try:
+            if not self._client:
+                self._initialize_client()
+            if pattern:
+                keys = await self._client.keys(pattern)
+                if keys:
+                    await self._client.delete(*keys)
+                    logger.info("Redis clear successful", pattern=pattern, keys_deleted=len(keys))
+            else:
+                await self._client.flushdb()
+                logger.info("Redis clear all successful")
+        except Exception as e:
+            logger.warning("Redis clear failed", pattern=pattern, error=str(e))
 
 
 class DatabaseBackend:
-    """Database cache backend (placeholder for future implementation)"""
+    """Database cache backend using Supabase"""
     
     def __init__(self, db_config: Dict[str, Any]):
         self.db_config = db_config
-        # TODO: Initialize database connection
-        raise NotImplementedError("Database backend not yet implemented - use memory backend")
+        self._client = None
+        self._initialize_client()
+    
+    def _initialize_client(self):
+        """Initialize Supabase client connection"""
+        try:
+            # Extract supabase client from config
+            self._client = self.db_config.get('supabase_client')
+            if not self._client:
+                raise ValueError("supabase_client not provided in db_config")
+            logger.info("Database cache client initialized")
+        except Exception as e:
+            logger.error("Failed to initialize database cache client", error=str(e))
+            raise
     
     async def get(self, key: str) -> Optional[str]:
-        raise NotImplementedError()
+        """Get value from database cache"""
+        try:
+            if not self._client:
+                return None
+            
+            # Query cache table for the key
+            result = self._client.table("llm_cache").select("value, expires_at").eq("key", key).execute()
+            
+            if result.data and len(result.data) > 0:
+                cache_entry = result.data[0]
+                expires_at = cache_entry.get('expires_at')
+                
+                # Check if expired
+                if expires_at:
+                    from datetime import datetime
+                    if datetime.fromisoformat(expires_at) < datetime.now():
+                        # Entry expired, delete it
+                        await self.delete(key)
+                        return None
+                
+                return cache_entry.get('value')
+            return None
+        except Exception as e:
+            # Check if it's a table not found error
+            if "relation \"llm_cache\" does not exist" in str(e) or "table \"llm_cache\" does not exist" in str(e):
+                logger.warning("LLM cache table does not exist. Run migration: create_llm_cache_table.sql", key=key)
+                return None
+            logger.warning("Database cache get failed", key=key, error=str(e))
+            return None
     
     async def set(self, key: str, value: str, ttl: int = 3600):
-        raise NotImplementedError()
+        """Set value in database cache with TTL"""
+        try:
+            if not self._client:
+                return
+            
+            from datetime import datetime, timedelta
+            expires_at = datetime.now() + timedelta(seconds=ttl)
+            
+            # Upsert cache entry
+            self._client.table("llm_cache").upsert({
+                "key": key,
+                "value": value,
+                "expires_at": expires_at.isoformat(),
+                "created_at": datetime.now().isoformat()
+            }).execute()
+            
+            logger.debug("Database cache set successful", key=key, ttl=ttl)
+        except Exception as e:
+            # Check if it's a table not found error
+            if "relation \"llm_cache\" does not exist" in str(e) or "table \"llm_cache\" does not exist" in str(e):
+                logger.warning("LLM cache table does not exist. Run migration: create_llm_cache_table.sql", key=key)
+                return
+            logger.warning("Database cache set failed", key=key, error=str(e))
     
     async def delete(self, key: str):
-        raise NotImplementedError()
+        """Delete key from database cache"""
+        try:
+            if not self._client:
+                return
+            
+            self._client.table("llm_cache").delete().eq("key", key).execute()
+            logger.debug("Database cache delete successful", key=key)
+        except Exception as e:
+            # Check if it's a table not found error
+            if "relation \"llm_cache\" does not exist" in str(e) or "table \"llm_cache\" does not exist" in str(e):
+                logger.warning("LLM cache table does not exist. Run migration: create_llm_cache_table.sql", key=key)
+                return
+            logger.warning("Database cache delete failed", key=key, error=str(e))
     
     async def clear(self, pattern: Optional[str] = None):
-        raise NotImplementedError()
+        """Clear cache entries matching pattern"""
+        try:
+            if not self._client:
+                return
+            
+            if pattern:
+                # For pattern matching, we need to get all keys and filter
+                # This is a simplified implementation - in production you might want
+                # to use SQL LIKE or similar for better performance
+                result = self._client.table("llm_cache").select("key").execute()
+                keys_to_delete = []
+                
+                for entry in result.data:
+                    key = entry.get('key', '')
+                    if pattern in key:  # Simple pattern matching
+                        keys_to_delete.append(key)
+                
+                if keys_to_delete:
+                    self._client.table("llm_cache").delete().in_("key", keys_to_delete).execute()
+                    logger.info("Database cache clear successful", pattern=pattern, keys_deleted=len(keys_to_delete))
+            else:
+                # Clear all cache entries
+                self._client.table("llm_cache").delete().neq("key", "").execute()
+                logger.info("Database cache clear all successful")
+        except Exception as e:
+            # Check if it's a table not found error
+            if "relation \"llm_cache\" does not exist" in str(e) or "table \"llm_cache\" does not exist" in str(e):
+                logger.warning("LLM cache table does not exist. Run migration: create_llm_cache_table.sql", pattern=pattern)
+                return
+            logger.warning("Database cache clear failed", pattern=pattern, error=str(e))

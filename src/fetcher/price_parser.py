@@ -30,12 +30,14 @@ class PriceDelta:
         currency: str,
         in_stock: bool,
         sku: Optional[str] = None,
+        old_in_stock: Optional[bool] = None,
     ):
         self.variant_id = variant_id
         self.old_price = old_price
         self.new_price = new_price
         self.currency = currency
         self.in_stock = in_stock
+        self.old_in_stock = old_in_stock
         self.sku = sku
         self.detected_at = datetime.now(timezone.utc)
     
@@ -46,9 +48,18 @@ class PriceDelta:
         return self.old_price != self.new_price
     
     def has_availability_change(self) -> bool:
-        """Check if availability changed (placeholder for future implementation)."""
-        # This would need to be implemented with existing stock data
-        return False
+        """Check if availability changed by comparing current vs previous stock status."""
+        try:
+            # If no previous availability data, consider it a change (new product)
+            if self.old_in_stock is None:
+                return True
+                
+            # Check if availability status changed
+            return self.in_stock != self.old_in_stock
+            
+        except Exception as e:
+            logger.warning(f"Error checking availability change: {e}")
+            return False
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for storage."""
@@ -398,12 +409,14 @@ class PriceParser:
             # Convert new price to Decimal
             new_price_decimal = Decimal(str(new_price))
             
-            # Get existing price
+            # Get existing price and availability
             old_price = None
+            old_in_stock = None
             if existing_variant:
                 old_price_value = existing_variant.get('price_current')
                 if old_price_value is not None:
                     old_price = Decimal(str(old_price_value))
+                old_in_stock = existing_variant.get('in_stock')
             
             return PriceDelta(
                 variant_id=variant_id,
@@ -412,6 +425,7 @@ class PriceParser:
                 currency=currency,
                 in_stock=in_stock,
                 sku=sku,
+                old_in_stock=old_in_stock,
             )
             
         except Exception as e:
@@ -424,7 +438,7 @@ class PriceParser:
     
     def normalize_currency(self, price: Decimal, from_currency: str, to_currency: str = 'USD') -> Decimal:
         """
-        Normalize currency (placeholder for future implementation).
+        Normalize currency to target currency using basic exchange rates.
         
         Args:
             price: Price to normalize
@@ -432,11 +446,49 @@ class PriceParser:
             to_currency: Target currency (default USD)
             
         Returns:
-            Normalized price (currently returns original price)
+            Normalized price in target currency
         """
-        # TODO: Implement actual currency conversion
-        # For now, just return the original price
-        return price
+        try:
+            # If same currency, no conversion needed
+            if from_currency.upper() == to_currency.upper():
+                return price
+            
+            # Basic exchange rates (as of 2024, simplified for demo)
+            # In production, this would use a real currency API
+            exchange_rates = {
+                'USD': 1.0,
+                'EUR': 0.85,
+                'GBP': 0.73,
+                'CAD': 1.25,
+                'AUD': 1.35,
+                'JPY': 110.0,
+                'CHF': 0.92,
+                'SEK': 8.5,
+                'NOK': 8.8,
+                'DKK': 6.3
+            }
+            
+            # Get exchange rates
+            from_rate = exchange_rates.get(from_currency.upper(), 1.0)
+            to_rate = exchange_rates.get(to_currency.upper(), 1.0)
+            
+            # Convert: price -> USD -> target currency
+            usd_price = float(price) / from_rate
+            converted_price = usd_price * to_rate
+            
+            logger.debug(
+                f"Currency conversion: {price} {from_currency} -> {converted_price:.2f} {to_currency}",
+                from_currency=from_currency,
+                to_currency=to_currency,
+                original_price=float(price),
+                converted_price=converted_price
+            )
+            
+            return Decimal(str(round(converted_price, 2)))
+            
+        except Exception as e:
+            logger.warning(f"Currency conversion failed, returning original price: {e}")
+            return price
     
     def get_performance_metrics(self) -> Dict[str, Any]:
         """Get performance metrics for the parser."""
