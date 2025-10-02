@@ -25,7 +25,7 @@ This story implements Firecrawl extract functionality to scrape individual produ
 3. Artifact validation ensures Firecrawl data meets same standards as Shopify/WooCommerce
 4. Integration with existing C.1-C.8 normalizer pipeline for text processing
 5. Image processing integration with F.1-F.3 image handling pipeline
-6. Budget tracking decrements for each extract operation
+6. Integration with E.3 budget tracking system for extract operations
 7. Error handling for extraction failures with appropriate retry logic
 8. Comprehensive test coverage with sample Firecrawl output data
 
@@ -52,12 +52,12 @@ This story implements Firecrawl extract functionality to scrape individual produ
 - [ ] Add sensory content parsing for Firecrawl products
 - [ ] Ensure consistent data quality across all sources
 
-### Task 4: Budget tracking and error handling (AC: 6, 7)
-- [ ] Implement budget tracking for extract operations
-- [ ] Add budget exhaustion handling and alerts
+### Task 4: Error handling and integration (AC: 6, 7)
+- [ ] Integrate with E.3 budget tracking system for extract operations
 - [ ] Create error handling for extraction failures
 - [ ] Implement retry logic with exponential backoff
 - [ ] Add fallback behavior for failed extractions
+- [ ] Add comprehensive logging for extract operations
 
 ### Task 5: Testing and validation (AC: 8)
 - [ ] Create test fixtures with sample Firecrawl output data
@@ -92,6 +92,11 @@ This story implements Firecrawl extract functionality to scrape individual produ
 - **Schema**: Define schema for product data extraction
 - **Include Links**: Extract related product links
 - **Include Images**: Extract product images and metadata
+
+**Integration with E.1 Map Discovery:**
+- **Input**: Product URLs discovered by E.1 FirecrawlMapService
+- **Processing**: Extract individual product pages using Firecrawl extract API
+- **Output**: Canonical artifacts ready for A.3 validation and A.4 RPC integration
 
 ### Canonical Artifact Schema Integration
 [Source: A.3 artifact validation and existing schema]
@@ -180,7 +185,7 @@ python -m pytest tests/integration/test_firecrawl_extract_integration.py -v
 - [ ] Artifact validation ensures data quality standards
 - [ ] Integration with existing C.1-C.8 normalizer pipeline
 - [ ] Image processing integration with F.1-F.3 pipeline
-- [ ] Budget tracking decrements for each extract operation
+- [ ] Integration with E.3 budget tracking system for extract operations
 - [ ] Error handling for extraction failures with retry logic
 - [ ] Comprehensive test coverage with sample data
 - [ ] Performance optimization for batch operations

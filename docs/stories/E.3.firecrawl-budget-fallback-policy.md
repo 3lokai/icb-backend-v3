@@ -13,17 +13,18 @@ This story implements budget management and fallback policies for Firecrawl oper
 
 ## Dependencies
 **✅ COMPLETED: Core infrastructure exists:**
-- **E.1 Firecrawl Map Discovery**: Product URL discovery with budget tracking
-- **E.2 Firecrawl Extract**: Product extraction with budget decrement
+- **E.1 Firecrawl Map Discovery**: Product URL discovery with budget tracking implementation
+- **E.2 Firecrawl Extract**: Product extraction with budget integration
 - **G.1-G.4 Monitoring**: Observability and alerting infrastructure
 - **A.1-A.5 Pipeline**: Job queue and error handling systems
 - **Database Schema**: Roaster configuration with budget fields
+- **Budget Tracking**: FirecrawlBudgetTracker and budget monitoring already implemented
 
 ## Acceptance Criteria
-1. Budget tracking decrements for each Firecrawl map and extract operation
+1. Budget management service for operations team control and monitoring
 2. Budget exhaustion detection and automatic fallback behavior
 3. Roaster flagging when budget exhausted with appropriate alerts
-4. Budget reporting and analytics for cost monitoring
+4. Budget reporting and analytics for cost monitoring and forecasting
 5. Integration with existing G.1-G.4 monitoring and alerting system
 6. State persistence for budget tracking across system restarts
 7. Budget reset and management capabilities for operations team
@@ -31,12 +32,12 @@ This story implements budget management and fallback policies for Firecrawl oper
 
 ## Tasks / Subtasks
 
-### Task 1: Budget tracking implementation (AC: 1, 6)
-- [ ] Create FirecrawlBudgetService following A.1-A.5 patterns
-- [ ] Implement budget decrement for map and extract operations
+### Task 1: Budget management service (AC: 1, 6)
+- [ ] Create FirecrawlBudgetManagementService for operations team
+- [ ] Integrate with existing FirecrawlBudgetTracker from E.1
 - [ ] Add budget state persistence to database
-- [ ] Create budget tracking metrics and monitoring
-- [ ] Add comprehensive logging for budget operations
+- [ ] Create budget management API for operations team
+- [ ] Add comprehensive logging for budget management operations
 
 ### Task 2: Budget exhaustion handling (AC: 2, 3)
 - [ ] Implement budget exhaustion detection logic
@@ -45,17 +46,17 @@ This story implements budget management and fallback policies for Firecrawl oper
 - [ ] Implement graceful degradation for Firecrawl operations
 - [ ] Add fallback to manual processing when budget exhausted
 
-### Task 3: Alerting and monitoring integration (AC: 4, 5)
+### Task 3: Budget reporting and analytics (AC: 4, 5)
+- [ ] Create budget reporting dashboards and analytics
 - [ ] Integrate budget alerts with G.1-G.4 monitoring system
-- [ ] Create budget exhaustion alerts for operations team
-- [ ] Add budget usage dashboards and reporting
-- [ ] Implement budget trend analysis and forecasting
-- [ ] Add budget health checks and monitoring
+- [ ] Implement budget trend analysis and cost forecasting
+- [ ] Add budget usage reporting for operations team
+- [ ] Create budget health checks and monitoring
 
-### Task 4: Budget management and operations (AC: 7, 8)
-- [ ] Create budget reset and management capabilities
-- [ ] Add budget allocation and distribution logic
-- [ ] Implement budget recovery and replenishment
+### Task 4: Budget operations and management (AC: 7, 8)
+- [ ] Create budget reset and replenishment capabilities
+- [ ] Add budget allocation and distribution logic for roasters
+- [ ] Implement budget recovery procedures and workflows
 - [ ] Add budget audit trails and compliance tracking
 - [ ] Create budget management API for operations team
 
@@ -78,20 +79,20 @@ This story implements budget management and fallback policies for Firecrawl oper
 - **A.1-A.5 Pipeline**: Job queue integration with budget checks
 - **Database Schema**: Budget tracking and state persistence
 
-### Budget Tracking Implementation
-[Source: existing monitoring and database patterns]
+### Budget Management Implementation
+[Source: existing E.1 budget tracking and database patterns]
 
-**Budget Fields:**
-- `firecrawl_budget_limit`: Total budget allocated per roaster
-- `firecrawl_budget_used`: Current budget consumption
-- `firecrawl_budget_remaining`: Available budget for operations
-- `firecrawl_budget_exhausted_at`: Timestamp when budget exhausted
+**Budget Management Features:**
+- **Budget Allocation**: Distribute budget across roasters based on priority
+- **Budget Monitoring**: Track usage patterns and cost trends
+- **Budget Recovery**: Replenish exhausted budgets and reset limits
+- **Budget Analytics**: Cost analysis and forecasting for operations planning
 
-**Budget Operations:**
-- **Map Operation**: Decrement budget by map cost (typically lower)
-- **Extract Operation**: Decrement budget by extract cost (typically higher)
-- **Budget Check**: Verify sufficient budget before operations
-- **Budget Reset**: Replenish budget for continued operations
+**Integration with E.1 Budget Tracking:**
+- **Existing**: FirecrawlBudgetTracker from E.1 handles operational budget tracking
+- **New**: FirecrawlBudgetManagementService for operations team control
+- **Database**: Extend existing budget fields with management capabilities
+- **API**: Operations team interface for budget control and monitoring
 
 ### Fallback Policy Implementation
 [Source: existing error handling and fallback patterns]
@@ -174,7 +175,7 @@ python -m pytest tests/integration/test_firecrawl_budget_integration.py -v
 - **Performance Tests**: Budget operations under load
 
 ## Definition of Done
-- [ ] Budget tracking decrements for each Firecrawl operation
+- [ ] Budget management service for operations team control
 - [ ] Budget exhaustion detection and automatic fallback
 - [ ] Roaster flagging when budget exhausted with alerts
 - [ ] Budget reporting and analytics for cost monitoring

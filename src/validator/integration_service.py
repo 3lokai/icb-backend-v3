@@ -9,6 +9,8 @@ from pathlib import Path
 
 from structlog import get_logger
 
+from src.config.roaster_schema import RoasterConfigSchema
+
 from .artifact_validator import ArtifactValidator
 from .storage_reader import StorageReader
 from .validation_pipeline import ValidationPipeline
@@ -20,6 +22,7 @@ from ..config.validator_config import ValidatorConfig
 from ..config.imagekit_config import ImageKitConfig
 from ..config.text_cleaning_config import TextCleaningConfig
 from ..config.text_normalization_config import TextNormalizationConfig
+from ..config.firecrawl_config import FirecrawlConfig
 from .type_utils import assert_imagekit_config
 from ..images.deduplication_service import ImageDeduplicationService
 from ..images.imagekit_service import ImageKitService
@@ -37,6 +40,10 @@ from ..parser.sensory_parser import SensoryParserService
 from ..parser.content_hash import ContentHashService
 from ..parser.text_cleaning import TextCleaningService
 from ..parser.text_normalization import TextNormalizationService
+
+# Import Firecrawl services
+from ..fetcher.firecrawl_client import FirecrawlClient
+from ..fetcher.firecrawl_map_service import FirecrawlMapService
 
 # Import C.8 normalizer pipeline components
 from ..parser.normalizer_pipeline import NormalizerPipelineService
@@ -200,6 +207,44 @@ class ValidatorIntegrationService:
             self.text_normalization_service = TextNormalizationService(text_normalization_config)
         else:
             self.text_normalization_service = None
+        
+        # Initialize Firecrawl services (if enabled)
+        self.firecrawl_client = None
+        self.firecrawl_map_service = None
+        
+        if hasattr(self.config, 'enable_firecrawl') and self.config.enable_firecrawl:
+            try:
+                # Create Firecrawl configuration
+                firecrawl_config = FirecrawlConfig(
+                    api_key=getattr(self.config, 'FIRECRAWL_API_KEY', ''),
+                    base_url=getattr(self.config, 'FIRECRAWL_BASE_URL', 'https://api.firecrawl.dev'),
+                    budget_limit=getattr(self.config, 'FIRECRAWL_BUDGET_LIMIT', 1000),
+                    max_pages=getattr(self.config, 'FIRECRAWL_MAX_PAGES', 50),
+                    include_subdomains=getattr(self.config, 'FIRECRAWL_INCLUDE_SUBDOMAINS', False),
+                    sitemap_only=getattr(self.config, 'FIRECRAWL_SITEMAP_ONLY', False),
+                    coffee_keywords=getattr(self.config, 'FIRECRAWL_COFFEE_KEYWORDS', [
+                        'coffee', 'bean', 'roast', 'brew', 'espresso',
+                        'latte', 'cappuccino', 'mocha', 'americano'
+                    ]),
+                    timeout=getattr(self.config, 'FIRECRAWL_TIMEOUT', 30.0),
+                    max_retries=getattr(self.config, 'FIRECRAWL_MAX_RETRIES', 3),
+                    retry_delay=getattr(self.config, 'FIRECRAWL_RETRY_DELAY', 1.0),
+                    enable_monitoring=getattr(self.config, 'FIRECRAWL_ENABLE_MONITORING', True),
+                    log_level=getattr(self.config, 'FIRECRAWL_LOG_LEVEL', 'INFO')
+                )
+                
+                # Initialize Firecrawl client
+                self.firecrawl_client = FirecrawlClient(firecrawl_config)
+                
+                # Initialize Firecrawl map service
+                self.firecrawl_map_service = FirecrawlMapService(self.firecrawl_client)
+                
+                logger.info("Firecrawl services initialized successfully")
+                
+            except Exception as e:
+                logger.warning("Failed to initialize Firecrawl services", error=str(e))
+                self.firecrawl_client = None
+                self.firecrawl_map_service = None
         
         # Initialize artifact mapper after image services
         self.artifact_mapper = ArtifactMapper(
@@ -1040,3 +1085,136 @@ class ValidatorIntegrationService:
         )
         
         return results
+    
+    async def discover_roaster_products_firecrawl(
+        self,
+        roaster_config: 'RoasterConfigSchema',
+        search_terms: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Discover product URLs for a roaster using Firecrawl map service.
+        
+        Args:
+            roaster_config: Roaster configuration
+            search_terms: Optional search terms to filter URLs
+            
+        Returns:
+            Dictionary containing discovered URLs and metadata
+        """
+        if not self.firecrawl_map_service:
+            logger.warning(
+                "Firecrawl map service not available",
+                roaster_id=roaster_config.id
+            )
+            return {
+                'roaster_id': roaster_config.id,
+                'discovered_urls': [],
+                'status': 'service_unavailable',
+                'message': 'Firecrawl map service not initialized'
+            }
+        
+        try:
+            result = await self.firecrawl_map_service.discover_roaster_products(
+                roaster_config=roaster_config,
+                search_terms=search_terms
+            )
+            
+            logger.info(
+                "Firecrawl product discovery completed",
+                roaster_id=roaster_config.id,
+                discovered_count=len(result.get('discovered_urls', [])),
+                status=result.get('status')
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(
+                "Firecrawl product discovery failed",
+                roaster_id=roaster_config.id,
+                error=str(e)
+            )
+            return {
+                'roaster_id': roaster_config.id,
+                'discovered_urls': [],
+                'status': 'error',
+                'message': f'Discovery failed: {str(e)}'
+            }
+    
+    async def batch_discover_products_firecrawl(
+        self,
+        roaster_configs: List['RoasterConfigSchema'],
+        search_terms: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """
+        Discover product URLs for multiple roasters using Firecrawl map service.
+        
+        Args:
+            roaster_configs: List of roaster configurations
+            search_terms: Optional search terms to filter URLs
+            
+        Returns:
+            Dictionary containing batch discovery results
+        """
+        if not self.firecrawl_map_service:
+            logger.warning("Firecrawl map service not available for batch discovery")
+            return {
+                'batch_timestamp': datetime.now(timezone.utc).isoformat(),
+                'total_roasters': len(roaster_configs),
+                'successful_discoveries': 0,
+                'total_urls_discovered': 0,
+                'results': [],
+                'status': 'service_unavailable',
+                'message': 'Firecrawl map service not initialized'
+            }
+        
+        try:
+            result = await self.firecrawl_map_service.batch_discover_products(
+                roaster_configs=roaster_configs,
+                search_terms=search_terms
+            )
+            
+            logger.info(
+                "Firecrawl batch product discovery completed",
+                total_roasters=len(roaster_configs),
+                successful_discoveries=result.get('successful_discoveries', 0),
+                total_urls_discovered=result.get('total_urls_discovered', 0)
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(
+                "Firecrawl batch product discovery failed",
+                error=str(e)
+            )
+            return {
+                'batch_timestamp': datetime.now(timezone.utc).isoformat(),
+                'total_roasters': len(roaster_configs),
+                'successful_discoveries': 0,
+                'total_urls_discovered': 0,
+                'results': [],
+                'status': 'error',
+                'message': f'Batch discovery failed: {str(e)}'
+            }
+    
+    async def get_firecrawl_service_status(self) -> Dict[str, Any]:
+        """Get Firecrawl service status and health information."""
+        if not self.firecrawl_map_service:
+            return {
+                'service': 'FirecrawlMapService',
+                'status': 'unavailable',
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'message': 'Firecrawl map service not initialized'
+            }
+        
+        try:
+            return await self.firecrawl_map_service.get_service_status()
+        except Exception as e:
+            logger.error("Failed to get Firecrawl service status", error=str(e))
+            return {
+                'service': 'FirecrawlMapService',
+                'status': 'error',
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'error': str(e)
+            }

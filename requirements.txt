@@ -9,6 +9,9 @@ python-dotenv
 # LLM Services
 openai
 
+# Web scraping and mapping
+firecrawl-py
+
 # Database
 supabase
 

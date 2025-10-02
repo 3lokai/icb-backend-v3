@@ -57,3 +57,41 @@ logs/
 
 # Redis
 dump.rdb
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+
+# Test data and artifacts
+test_data/
+test_data_cleanup/
+unified_test_data/
+sample_canonical_artifacts.json
+
+# Generated data files
+data/validator/
+data/fetcher/failed/
+data/fetcher/metadata/
+
+# Monitoring generated files
+monitoring/grafana/dashboards/
+monitoring/prometheus/data/
+
+# Temporary files
+tatus
+*.tmp
+*.temp
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json

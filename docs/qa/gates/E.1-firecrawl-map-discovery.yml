@@ -1,0 +1,63 @@
+schema: 1
+story: 'E.1'
+story_title: 'Firecrawl map discovery'
+gate: CONCERNS
+status_reason: 'Core functionality complete but integration tests failing due to schema mismatches'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-01-02T20:15:00Z'
+
+top_issues:
+  - id: 'TEST-001'
+    severity: medium
+    finding: 'Integration tests failing due to RoasterConfigSchema field name mismatches'
+    suggested_action: 'Update test fixtures to use correct field names (id vs roaster_id, use_firecrawl_fallback vs firecrawl_enabled)'
+    suggested_owner: 'dev'
+  - id: 'TEST-002'
+    severity: medium
+    finding: 'FirecrawlMapService constructor parameter access issue'
+    suggested_action: 'Fix constructor to properly access client configuration'
+    suggested_owner: 'dev'
+  - id: 'TEST-003'
+    severity: low
+    finding: 'Missing real API integration tests'
+    suggested_action: 'Add integration tests with actual Firecrawl API (with proper mocking)'
+    suggested_owner: 'dev'
+
+waiver: { active: false }
+
+# Extended fields
+quality_score: 75
+expires: '2025-01-16T20:15:00Z'
+
+evidence:
+  tests_reviewed: 23
+  risks_identified: 3
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7, 8]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'Proper API key handling, input validation, and rate limiting implemented'
+  performance:
+    status: PASS
+    notes: 'Rate limiting, budget tracking, and batch processing implemented'
+  reliability:
+    status: PASS
+    notes: 'Comprehensive error handling, retry logic, and fallback mechanisms'
+  maintainability:
+    status: CONCERNS
+    notes: 'Integration test failures indicate potential maintenance issues'
+
+recommendations:
+  immediate:
+    - action: 'Fix integration test schema mismatches'
+      refs: ['tests/integration/test_firecrawl_integration.py']
+    - action: 'Verify FirecrawlMapService constructor'
+      refs: ['src/fetcher/firecrawl_map_service.py']
+  future:
+    - action: 'Add comprehensive integration tests with real API'
+      refs: ['tests/integration/']
+    - action: 'Consider performance benchmarks for large-scale operations'
+      refs: ['tests/performance/']
