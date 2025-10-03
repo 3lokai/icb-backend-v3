@@ -1,0 +1,25 @@
+# Fly.io configuration for dashboard deployment
+app = "coffee-dashboard"
+primary_region = "iad"
+
+[build]
+
+[env]
+  FLASK_ENV = "production"
+  DASHBOARD_SECRET_KEY = "change-this-in-production"
+
+[http_service]
+  internal_port = 5000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+[deploy]
+  release_command = "echo 'Dashboard deployment complete'"

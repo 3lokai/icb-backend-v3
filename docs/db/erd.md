@@ -51,6 +51,14 @@ PRODUCT_SOURCES (1) ──────── (N) SCRAPE_RUNS
     └─── (1) ROASTERS           └─── (N) SCRAPE_ARTIFACTS
 ```
 
+### AI and Cache System Relationships
+
+```
+ENRICHMENTS (N) ──────── (1) ARTIFACTS
+    │
+    └─── (1) LLM_CACHE (Independent)
+```
+
 ## Detailed Relationship Descriptions
 
 ### 1. Roasters to Coffees (One-to-Many)
@@ -140,6 +148,18 @@ PRODUCT_SOURCES (1) ──────── (N) SCRAPE_RUNS
 - **Cardinality:** 1:N
 - **Referenced Relations:** `scrape_runs`
 
+### 14. Enrichments to Artifacts (Many-to-One)
+- **Relationship:** Many enrichments can be associated with one artifact
+- **Foreign Key:** `enrichments.artifact_id` → `artifacts.id`
+- **Cardinality:** N:1
+- **Referenced Relations:** `artifacts`
+
+### 15. LLM Cache (Independent)
+- **Relationship:** LLM cache is independent and not directly related to other entities
+- **Purpose:** Stores cached LLM responses for performance optimization
+- **Cardinality:** Independent
+- **Referenced Relations:** None (standalone table)
+
 ## Database Views and Their Relationships
 
 ### Coffee Summary View
@@ -166,6 +186,56 @@ PRODUCT_SOURCES (1) ──────── (N) SCRAPE_RUNS
 - **Key Fields:**
   - `scraped_at_latest`: Latest scraping timestamp
   - `is_sale`: Whether current price is a sale price
+
+## Platform Monitoring Views
+
+### Firecrawl Usage Tracking View
+- **Base Tables:** `roasters`
+- **Purpose:** Tracks Firecrawl usage across platforms
+- **Key Computed Fields:**
+  - `firecrawl_enabled_percentage`: Percentage of roasters with Firecrawl enabled
+  - `total_budget_allocated`: Total budget allocated across platforms
+  - `avg_budget_limit`: Average budget limit per platform
+
+### Platform Distribution View
+- **Base Tables:** `roasters`
+- **Purpose:** Shows platform distribution statistics
+- **Key Computed Fields:**
+  - `percentage`: Platform distribution percentage
+  - `active_roasters`: Active roasters per platform
+  - `avg_firecrawl_budget`: Average Firecrawl budget per platform
+
+### Platform Health Dashboard View
+- **Base Tables:** `roasters`, `coffees`, `sensory_params`
+- **Purpose:** Provides platform health metrics
+- **Key Computed Fields:**
+  - `active_percentage`: Percentage of active roasters
+  - `firecrawl_percentage`: Percentage with Firecrawl enabled
+  - `activity_status`: Overall platform activity status
+
+### Platform Performance Metrics View
+- **Base Tables:** `roasters`, `coffees`, `variants`, `prices`
+- **Purpose:** Provides platform performance metrics
+- **Key Computed Fields:**
+  - `avg_coffees_per_roaster`: Average coffees per roaster
+  - `avg_variants_per_coffee`: Average variants per coffee
+  - `rating_coverage_percentage`: Rating coverage percentage
+
+### Platform Usage Stats View
+- **Base Tables:** `roasters`, `coffees`, `variants`, `prices`
+- **Purpose:** Provides platform usage statistics
+- **Key Computed Fields:**
+  - `in_stock_variants`: In-stock variants count
+  - `out_of_stock_variants`: Out-of-stock variants count
+  - `avg_price`: Average price across platform
+
+### Recent Platform Activity View
+- **Base Tables:** `roasters`
+- **Purpose:** Shows recent platform activity
+- **Key Computed Fields:**
+  - `created_last_7_days`: Roasters created in last 7 days
+  - `updated_last_7_days`: Roasters updated in last 7 days
+  - `currently_active`: Currently active roasters
 
 ## Relationship Constraints and Business Rules
 

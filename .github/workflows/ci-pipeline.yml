@@ -1,0 +1,389 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '18'
+
+jobs:
+  # Code Quality and Linting
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run linting
+      run: |
+        python -m flake8 src/ tests/ --max-line-length=100 --exclude=__pycache__
+        python -m black --check src/ tests/
+        python -m isort --check-only src/ tests/
+    
+    - name: Run type checking
+      run: |
+        python -m mypy src/ --ignore-missing-imports
+
+  # Unit Tests
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    strategy:
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run unit tests
+      run: |
+        python -m pytest tests/unit/ tests/parser/ tests/validator/ -v --cov=src --cov-report=xml --cov-report=html
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unit-tests
+
+  # Integration Tests
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run integration tests
+      run: |
+        python -m pytest tests/integration/ -v --cov=src --cov-report=xml --cov-report=html
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: integration-tests
+
+  # Contract Tests
+  contract-tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run contract tests
+      run: |
+        python -m pytest tests/contract/ -v --cov=src --cov-report=xml --cov-report=html
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+    
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: contract-tests
+
+  # Performance Tests
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run performance tests
+      run: |
+        python -m pytest tests/performance/ -v --benchmark-only
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+
+  # Sample Data Tests
+  sample-data-tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run sample data tests
+      run: |
+        python -m pytest tests/integration/test_sample_data_orchestration.py -v
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
+  # Database Tests
+  database-tests:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run database tests
+      run: |
+        python -m pytest tests/database/ -v
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+
+  # Security Scanning
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run security scan
+      run: |
+        python -m bandit -r src/ -f json -o bandit-report.json
+        python -m safety check --json --output safety-report.json
+    
+    - name: Upload security reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+
+  # Build and Test Docker Image
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, contract-tests]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        tags: indiancoffeebeans/icb-backend:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Test Docker image
+      run: |
+        docker run --rm indiancoffeebeans/icb-backend:latest python -c "import src; print('Docker image test passed')"
+
+  # Quality Gates
+  quality-gates:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, contract-tests, performance-tests, security-scan]
+    if: always()
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check test results
+      run: |
+        echo "Unit tests: ${{ needs.unit-tests.result }}"
+        echo "Integration tests: ${{ needs.integration-tests.result }}"
+        echo "Contract tests: ${{ needs.contract-tests.result }}"
+        echo "Performance tests: ${{ needs.performance-tests.result }}"
+        echo "Security scan: ${{ needs.security-scan.result }}"
+    
+    - name: Fail if any tests failed
+      if: needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.contract-tests.result == 'failure'
+      run: |
+        echo "One or more test suites failed"
+        exit 1
+
+  # Coverage Report
+  coverage-report:
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, contract-tests]
+    if: always()
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Generate coverage report
+      run: |
+        echo "Coverage reports generated for:"
+        echo "- Unit tests: ${{ needs.unit-tests.result }}"
+        echo "- Integration tests: ${{ needs.integration-tests.result }}"
+        echo "- Contract tests: ${{ needs.contract-tests.result }}"
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./coverage.xml
+        flags: ci-pipeline
+        name: ci-pipeline-coverage
+        fail_ci_if_error: false
+
+  # Notification
+  notify:
+    runs-on: ubuntu-latest
+    needs: [quality-gates]
+    if: always()
+    steps:
+    - name: Notify on success
+      if: needs.quality-gates.result == 'success'
+      run: |
+        echo "✅ CI Pipeline completed successfully"
+        echo "All tests passed, quality gates satisfied"
+    
+    - name: Notify on failure
+      if: needs.quality-gates.result == 'failure'
+      run: |
+        echo "❌ CI Pipeline failed"
+        echo "One or more quality gates failed"
+        exit 1

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee Scraping Operations Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .health-excellent { color: #28a745; }
+        .health-good { color: #17a2b8; }
+        .health-warning { color: #ffc107; }
+        .health-critical { color: #dc3545; }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .alert-item {
+            border-left: 4px solid #dc3545;
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #f8d7da;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-healthy { background-color: #28a745; }
+        .status-warning { background-color: #ffc107; }
+        .status-critical { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="fas fa-coffee"></i> Coffee Scraping Operations Dashboard
+            </span>
+            <span class="navbar-text">
+                Last Updated: <span id="lastUpdated">Loading...</span>
+            </span>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- System Health Overview -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-heartbeat"></i> System Health Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="metric-card text-center">
+                                    <div class="metric-value" id="healthScore">--</div>
+                                    <div class="metric-label">Health Score</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card text-center">
+                                    <div class="metric-value" id="totalRoasters">--</div>
+                                    <div class="metric-label">Total Roasters</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card text-center">
+                                    <div class="metric-value" id="totalCoffees">--</div>
+                                    <div class="metric-label">Total Coffees</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card text-center">
+                                    <div class="metric-value" id="activeAlerts">--</div>
+                                    <div class="metric-label">Active Alerts</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Platform Distribution -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-pie"></i> Platform Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="platformChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-line"></i> Performance Metrics</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Alerts -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-history"></i> Recent Activity</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="recentActivity">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Active Alerts</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="activeAlerts">
+                            <div class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Budget & Cost Monitoring -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-dollar-sign"></i> Budget & Cost Monitoring</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6>Budget Usage</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar" id="budgetProgress" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small id="budgetText">0%</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6>Error Rate</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-danger" id="errorProgress" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small id="errorText">0%</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6>Success Rate</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" id="successProgress" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <small id="successText">0%</small>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    <h6>System Status</h6>
+                                    <div id="systemStatus">
+                                        <span class="status-indicator status-healthy"></span>
+                                        <span>Healthy</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global variables
+        let platformChart, performanceChart;
+        let refreshInterval;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeCharts();
+            loadDashboardData();
+            
+            // Auto-refresh every 30 seconds
+            refreshInterval = setInterval(loadDashboardData, 30000);
+        });
+
+        function initializeCharts() {
+            // Platform Distribution Chart
+            const platformCtx = document.getElementById('platformChart').getContext('2d');
+            platformChart = new Chart(platformCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#FF6384',
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#9966FF'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Performance Chart
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(performanceCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Success Rate',
+                        data: [],
+                        borderColor: '#36A2EB',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadDashboardData() {
+            try {
+                // Load overview data
+                const overviewResponse = await fetch('/api/dashboard/overview');
+                const overviewData = await overviewResponse.json();
+                updateOverview(overviewData);
+
+                // Load roasters data
+                const roastersResponse = await fetch('/api/dashboard/roasters');
+                const roastersData = await roastersResponse.json();
+                updateRoastersData(roastersData);
+
+                // Load budget data
+                const budgetResponse = await fetch('/api/dashboard/budget');
+                const budgetData = await budgetResponse.json();
+                updateBudgetData(budgetData);
+
+                // Update last updated timestamp
+                document.getElementById('lastUpdated').textContent = new Date().toLocaleTimeString();
+
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showError('Failed to load dashboard data');
+            }
+        }
+
+        function updateOverview(data) {
+            if (data.system_health) {
+                document.getElementById('healthScore').textContent = data.system_health.score;
+                document.getElementById('healthScore').className = `metric-value health-${data.system_health.status}`;
+            }
+
+            if (data.platform_summary) {
+                document.getElementById('totalRoasters').textContent = data.platform_summary.total_roasters || 0;
+                document.getElementById('totalCoffees').textContent = data.platform_summary.total_coffees || 0;
+            }
+
+            if (data.active_alerts) {
+                document.getElementById('activeAlerts').textContent = data.active_alerts.length;
+            }
+        }
+
+        function updateRoastersData(data) {
+            if (data.distribution && platformChart) {
+                const labels = data.distribution.map(item => item.platform || 'Unknown');
+                const values = data.distribution.map(item => item.roaster_count || 0);
+                
+                platformChart.data.labels = labels;
+                platformChart.data.datasets[0].data = values;
+                platformChart.update();
+            }
+
+            if (data.recent_activity) {
+                const activityHtml = data.recent_activity.map(activity => `
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>${activity.description || 'Activity'}</span>
+                        <small class="text-muted">${new Date(activity.timestamp).toLocaleTimeString()}</small>
+                    </div>
+                `).join('');
+                
+                document.getElementById('recentActivity').innerHTML = activityHtml || '<p class="text-muted">No recent activity</p>';
+            }
+        }
+
+        function updateBudgetData(data) {
+            if (data.operations_data && data.operations_data.system_health) {
+                const health = data.operations_data.system_health;
+                
+                // Update budget usage
+                const budgetUsage = health.budget_usage || 0;
+                document.getElementById('budgetProgress').style.width = `${budgetUsage}%`;
+                document.getElementById('budgetText').textContent = `${budgetUsage.toFixed(1)}%`;
+
+                // Update error rate
+                const errorRate = health.error_rate || 0;
+                document.getElementById('errorProgress').style.width = `${errorRate * 100}%`;
+                document.getElementById('errorText').textContent = `${(errorRate * 100).toFixed(1)}%`;
+
+                // Update success rate
+                const successRate = 100 - (errorRate * 100);
+                document.getElementById('successProgress').style.width = `${successRate}%`;
+                document.getElementById('successText').textContent = `${successRate.toFixed(1)}%`;
+
+                // Update system status
+                const statusElement = document.getElementById('systemStatus');
+                const statusIndicator = statusElement.querySelector('.status-indicator');
+                const statusText = statusElement.querySelector('span:last-child');
+                
+                statusIndicator.className = `status-indicator status-${health.status}`;
+                statusText.textContent = health.status.charAt(0).toUpperCase() + health.status.slice(1);
+            }
+
+            if (data.operations_data && data.operations_data.active_alerts) {
+                const alertsHtml = data.operations_data.active_alerts.map(alert => `
+                    <div class="alert-item">
+                        <strong>${alert.type || 'Alert'}</strong><br>
+                        <small>${alert.message || 'No message'}</small>
+                    </div>
+                `).join('');
+                
+                document.getElementById('activeAlerts').innerHTML = alertsHtml || '<p class="text-muted">No active alerts</p>';
+            }
+        }
+
+        function showError(message) {
+            console.error(message);
+            // You could add a toast notification here
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

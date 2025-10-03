@@ -1,0 +1,223 @@
+[run]
+# Coverage configuration for ICB Backend v3
+
+# Source paths to measure coverage for
+source = src
+
+# Omit patterns (files/directories to ignore)
+omit = 
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */venv/*
+    */env/*
+    */migrations/*
+    */scripts/*
+    */monitoring/*
+    */prometheus/*
+    */grafana/*
+    setup.py
+    conftest.py
+
+# Branch coverage (measure both line and branch coverage)
+branch = True
+
+# Data file location
+data_file = .coverage
+
+# Parallel execution
+parallel = True
+
+# Fail if coverage is below threshold
+fail_under = 85
+
+[report]
+# Coverage report configuration
+
+# Exclude lines from coverage
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug-only code:
+    def __repr__
+    if self\.debug
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if non-runnable code isn't run:
+    if 0:
+    if __name__ == .__main__.:
+
+    # Don't complain about abstract methods
+    @(abc\.)?abstractmethod
+
+# Show missing lines in report
+show_missing = True
+
+# Precision for percentages
+precision = 2
+
+# Skip covered files in report
+skip_covered = False
+
+# Skip empty files
+skip_empty = False
+
+# Sort by coverage percentage
+sort = Cover
+
+[html]
+# HTML coverage report configuration
+
+# Directory for HTML report
+directory = htmlcov
+
+# Title for HTML report
+title = ICB Backend v3 Coverage Report
+
+# Show missing lines in HTML report
+show_missing = True
+
+# Skip covered files in HTML report
+skip_covered = False
+
+# Skip empty files in HTML report
+skip_empty = False
+
+[xml]
+# XML coverage report configuration
+
+# Output file for XML report
+output = coverage.xml
+
+# Include source code in XML report
+include_source = True
+
+# Show missing lines in XML report
+show_missing = True
+
+# Skip covered files in XML report
+skip_covered = False
+
+# Skip empty files in XML report
+skip_empty = False
+
+[coverage:run]
+# Additional run configuration
+
+# Include patterns (files to include)
+include = 
+    src/*.py
+    src/*/*.py
+    src/*/*/*.py
+
+# Exclude patterns (files to exclude)
+exclude = 
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */venv/*
+    */env/*
+    */migrations/*
+    */scripts/*
+    */monitoring/*
+    */prometheus/*
+    */grafana/*
+    setup.py
+    conftest.py
+
+# Branch coverage
+branch = True
+
+# Data file
+data_file = .coverage
+
+# Parallel execution
+parallel = True
+
+# Fail if coverage is below threshold
+fail_under = 85
+
+[coverage:report]
+# Additional report configuration
+
+# Exclude lines from coverage
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain about missing debug-only code:
+    def __repr__
+    if self\.debug
+
+    # Don't complain if tests don't hit defensive assertion code:
+    raise AssertionError
+    raise NotImplementedError
+
+    # Don't complain if non-runnable code isn't run:
+    if 0:
+    if __name__ == .__main__.:
+
+    # Don't complain about abstract methods
+    @(abc\.)?abstractmethod
+
+# Show missing lines in report
+show_missing = True
+
+# Precision for percentages
+precision = 2
+
+# Skip covered files in report
+skip_covered = False
+
+# Skip empty files
+skip_empty = False
+
+# Sort by coverage percentage
+sort = Cover
+
+# Coverage thresholds by module type
+# Parser modules: 90%+ coverage
+# Normalizer modules: 90%+ coverage
+# RPC functions: 95%+ coverage
+# Integration tests: 85%+ coverage
+# Sample data tests: 100% coverage for critical paths
+
+[coverage:html]
+# Additional HTML configuration
+
+# Directory for HTML report
+directory = htmlcov
+
+# Title for HTML report
+title = ICB Backend v3 Coverage Report
+
+# Show missing lines in HTML report
+show_missing = True
+
+# Skip covered files in HTML report
+skip_covered = False
+
+# Skip empty files in HTML report
+skip_empty = False
+
+[coverage:xml]
+# Additional XML configuration
+
+# Output file for XML report
+output = coverage.xml
+
+# Include source code in XML report
+include_source = True
+
+# Show missing lines in XML report
+show_missing = True
+
+# Skip covered files in XML report
+skip_covered = False
+
+# Skip empty files in XML report
+skip_empty = False

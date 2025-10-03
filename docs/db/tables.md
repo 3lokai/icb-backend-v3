@@ -320,6 +320,34 @@ Table storing scraping artifacts.
 **Relationships:**
 - `run_id` → `scrape_runs.id`
 
+## AI and Enrichment Tables
+
+### enrichments
+Table storing AI enrichment data for artifacts.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| artifact_id | string | No | Foreign key to artifact |
+| enrichment_id | string | No | Enrichment identifier |
+| field | string | No | Field being enriched |
+| llm_result | Json | No | LLM enrichment result |
+| confidence_score | number | No | Confidence score (0-1) |
+| applied | boolean | No | Whether enrichment was applied |
+| created_at | string | Yes | Creation timestamp |
+
+### llm_cache
+Table storing LLM response cache for performance optimization.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| key | string | No | Cache key |
+| value | string | No | Cached value |
+| created_at | string | Yes | Creation timestamp |
+| updated_at | string | Yes | Last update timestamp |
+| expires_at | string | Yes | Expiration timestamp |
+
 ## Database Views
 
 ### coffee_summary
@@ -382,6 +410,109 @@ View providing latest price information for variants.
 | compare_at_price | number | Compare at price |
 | price_one_time | number | One-time price |
 | scraped_at_latest | string | Latest scrape timestamp |
+
+## Platform Monitoring Views
+
+### firecrawl_usage_tracking
+View tracking Firecrawl usage across platforms.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| platform | platform_enum | Platform type |
+| total_roasters | number | Total roasters |
+| firecrawl_enabled_count | number | Roasters with Firecrawl enabled |
+| firecrawl_enabled_percentage | number | Percentage with Firecrawl enabled |
+| active_firecrawl_roasters | number | Active Firecrawl roasters |
+| total_budget_allocated | number | Total budget allocated |
+| avg_budget_limit | number | Average budget limit |
+| min_budget_limit | number | Minimum budget limit |
+| max_budget_limit | number | Maximum budget limit |
+
+### platform_distribution
+View showing platform distribution statistics.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| platform | platform_enum | Platform type |
+| roaster_count | number | Number of roasters |
+| percentage | number | Percentage of total |
+| active_roasters | number | Active roasters |
+| inactive_roasters | number | Inactive roasters |
+| avg_firecrawl_budget | number | Average Firecrawl budget |
+| firecrawl_enabled | number | Firecrawl enabled count |
+| first_roaster_created | string | First roaster creation date |
+| last_roaster_updated | string | Last roaster update date |
+
+### platform_health_dashboard
+View providing platform health metrics.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| platform | platform_enum | Platform type |
+| total_roasters | number | Total roasters |
+| active_roasters | number | Active roasters |
+| inactive_roasters | number | Inactive roasters |
+| active_percentage | number | Active percentage |
+| total_coffees | number | Total coffees |
+| active_coffees | number | Active coffees |
+| rated_coffees | number | Rated coffees |
+| avg_rating | number | Average rating |
+| firecrawl_enabled | number | Firecrawl enabled count |
+| firecrawl_percentage | number | Firecrawl percentage |
+| avg_budget_limit | number | Average budget limit |
+| last_activity | string | Last activity timestamp |
+| activity_status | string | Activity status |
+
+### platform_performance_metrics
+View providing platform performance metrics.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| platform | platform_enum | Platform type |
+| roaster_count | number | Number of roasters |
+| coffee_count | number | Number of coffees |
+| variant_count | number | Number of variants |
+| price_count | number | Number of prices |
+| avg_coffees_per_roaster | number | Average coffees per roaster |
+| avg_variants_per_coffee | number | Average variants per coffee |
+| avg_prices_per_variant | number | Average prices per variant |
+| rated_coffees | number | Rated coffees count |
+| avg_rating | number | Average rating |
+| rating_coverage_percentage | number | Rating coverage percentage |
+
+### platform_usage_stats
+View providing platform usage statistics.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| platform | platform_enum | Platform type |
+| total_roasters | number | Total roasters |
+| total_coffees | number | Total coffees |
+| total_variants | number | Total variants |
+| total_prices | number | Total prices |
+| active_coffees | number | Active coffees |
+| in_stock_variants | number | In-stock variants |
+| out_of_stock_variants | number | Out-of-stock variants |
+| avg_price | number | Average price |
+| avg_coffee_rating | number | Average coffee rating |
+| earliest_price | string | Earliest price timestamp |
+| latest_price | string | Latest price timestamp |
+
+### recent_platform_activity
+View showing recent platform activity.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| platform | platform_enum | Platform type |
+| total_roasters | number | Total roasters |
+| currently_active | number | Currently active roasters |
+| currently_inactive | number | Currently inactive roasters |
+| created_last_7_days | number | Created in last 7 days |
+| created_last_30_days | number | Created in last 30 days |
+| updated_last_7_days | number | Updated in last 7 days |
+| updated_last_30_days | number | Updated in last 30 days |
+| last_roaster_creation | string | Last roaster creation |
+| last_roaster_update | string | Last roaster update |
 
 ## Indexes and Constraints
 

@@ -62,22 +62,23 @@ rpc_upsert_coffee(
   p_process_raw: string,
   p_roast_level_raw: string,
   p_roast_style_raw: string,
+  p_acidity?: number,
+  p_altitude?: number,
+  p_body?: number,
+  p_content_hash?: string,
+  p_country?: string,
   p_decaf?: boolean,
+  p_default_grind?: grind_enum,
+  p_description_cleaned?: string,
+  p_flavors?: string[],
   p_notes_raw?: Json,
+  p_raw_hash?: string,
+  p_region?: string,
   p_source_raw?: Json,
   p_status?: coffee_status_enum,
   p_tags?: string[],
-  p_varieties?: string[],
   p_title_cleaned?: string,
-  p_description_cleaned?: string,
-  p_content_hash?: string,
-  p_raw_hash?: string,
-  p_acidity?: number,
-  p_body?: number,
-  p_flavors?: string[],
-  p_region?: string,
-  p_country?: string,
-  p_altitude?: number
+  p_varieties?: string[]
 ) -> string
 ```
 Upserts a coffee record and returns the coffee ID. Now includes Epic C normalization parameters for tags, geographic data, sensory parameters, and text cleaning.
@@ -220,6 +221,14 @@ rpc_check_duplicate_image_hash(
 ) -> string
 ```
 Checks for duplicate image content hash and returns the duplicate image ID if found.
+
+## Cache Management Functions
+
+### cleanup_expired_llm_cache
+```sql
+cleanup_expired_llm_cache() -> number
+```
+Cleans up expired entries from the LLM cache and returns the number of entries removed.
 
 ## Epic C Functions
 
