@@ -1,7 +1,7 @@
 # Story H.2: Integration tests: sample data validation
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** developer,

@@ -1,7 +1,7 @@
 # Story C.2: Roast & process mapping
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** data processing engineer,

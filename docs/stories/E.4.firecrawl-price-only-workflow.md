@@ -1,6 +1,6 @@
 # Story: E.4 Firecrawl Price-Only Workflow
 
-## Status: Ready for Done
+## Status: Done
 
 ## Story
 

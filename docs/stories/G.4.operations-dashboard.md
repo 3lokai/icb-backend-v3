@@ -1,7 +1,7 @@
 # Story G.4: Operations Dashboard (Web UI)
 
 ## Status
-Ready for Review
+Done
 
 ## Story
 **As a** system administrator and business stakeholder,

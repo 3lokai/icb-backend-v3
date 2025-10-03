@@ -1,7 +1,7 @@
 # Story H.3: Contract tests for RPCs & CI setup
 
 ## Status
-Ready for Review
+Done
 
 ## Story
 **As a** developer,

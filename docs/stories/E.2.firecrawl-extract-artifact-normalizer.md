@@ -1,7 +1,7 @@
 # Story E.2: Firecrawl extract → artifact normalizer
 
 ## Status
-Ready for Review
+Done
 
 ## Story
 **As a** system administrator,

@@ -1,8 +1,7 @@
 # Story H.1: Unit tests: parsers & normalizer fixes
 
 ## Status
-Ready for Done
-
+Done
 ## Story
 **As a** developer,
 **I want** all existing unit tests to pass with 90%+ coverage for parser modules,

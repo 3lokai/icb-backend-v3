@@ -1,7 +1,7 @@
 # Story E.3: Firecrawl budget & fallback policy
 
 ## Status
-Draft
+Done
 
 ## Story
 **As a** system administrator,
@@ -63,18 +63,18 @@ This story implements budget management and fallback policies for Firecrawl oper
 - [ ] **DEFER**: Complex budget analytics and forecasting (focus on core functionality first)
 
 ### Task 4: Budget operations and management (AC: 7, 8)
-- [ ] Create budget reset and replenishment capabilities
-- [ ] Add budget allocation and distribution logic for roasters
-- [ ] Implement budget recovery procedures and workflows
-- [ ] Add budget audit trails and compliance tracking
-- [ ] Create budget management API for operations team
+- [x] Create budget reset and replenishment capabilities
+- [x] Add budget allocation and distribution logic for roasters
+- [x] Implement budget recovery procedures and workflows
+- [x] Add budget audit trails and compliance tracking
+- [x] Create budget management API for operations team
 
 ### Task 5: Testing and validation (AC: 8)
-- [ ] Create test scenarios for budget exhaustion
-- [ ] Add edge case testing for budget scenarios
-- [ ] Implement integration tests with monitoring system
-- [ ] Add performance tests for budget operations
-- [ ] Create end-to-end tests for budget workflows
+- [x] Create test scenarios for budget exhaustion
+- [x] Add edge case testing for budget scenarios
+- [x] Implement integration tests with monitoring system
+- [x] Add performance tests for budget operations
+- [x] Create end-to-end tests for budget workflows
 
 ## Dev Notes
 
@@ -227,8 +227,8 @@ python -m pytest tests/integration/test_firecrawl_budget_integration.py -v
 - [x] State persistence for budget tracking across restarts
 - [x] Budget reset and management capabilities
 - [x] Comprehensive test coverage for budget scenarios
-- [ ] Performance optimization for budget operations
-- [ ] Documentation updated with budget management
+- [x] Performance optimization for budget operations
+- [x] Documentation updated with budget management
 
 ## QA Results
 

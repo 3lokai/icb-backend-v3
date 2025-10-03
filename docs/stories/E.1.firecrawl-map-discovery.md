@@ -1,7 +1,7 @@
 # Story E.1: Firecrawl map discovery
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** system administrator,

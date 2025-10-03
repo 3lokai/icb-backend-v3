@@ -1,7 +1,7 @@
 # Story C.1: Weight & unit parser library
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** data processing engineer,
