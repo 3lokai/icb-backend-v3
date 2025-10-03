@@ -348,6 +348,45 @@ Table storing LLM response cache for performance optimization.
 | updated_at | string | Yes | Last update timestamp |
 | expires_at | string | Yes | Expiration timestamp |
 
+## Authentication and Authorization Tables
+
+### user_roles
+Table storing user role assignments for dashboard access control.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| user_id | string | No | Foreign key to auth.users |
+| role | user_role_enum | No | User role (admin, operator, user, viewer) |
+| created_at | string | No | Creation timestamp |
+| updated_at | string | No | Last update timestamp |
+| created_by | string | Yes | User who assigned the role |
+
+**Relationships:**
+- `user_id` → `auth.users.id`
+- `created_by` → `auth.users.id`
+
+**Constraints:**
+- Unique constraint on `user_id` (one role per user)
+- Default role is 'user'
+
+### role_audit_log
+Table storing audit trail for role changes.
+
+| Column | Type | Nullable | Description |
+|--------|------|----------|-------------|
+| id | string | No | Primary key (UUID) |
+| user_id | string | No | Foreign key to auth.users |
+| old_role | user_role_enum | Yes | Previous role |
+| new_role | user_role_enum | No | New role |
+| changed_by | string | No | User who made the change |
+| changed_at | string | No | Change timestamp |
+| reason | string | Yes | Reason for change |
+
+**Relationships:**
+- `user_id` → `auth.users.id`
+- `changed_by` → `auth.users.id`
+
 ## Database Views
 
 ### coffee_summary

@@ -143,6 +143,18 @@ This document describes all enumerated types (enums) used in the database schema
 
 **Usage:** Used in the `coffees` table to specify the coffee species.
 
+## User Role Enum
+
+**Type:** `user_role_enum`
+
+**Values:**
+- `admin` - Full system administrator with all permissions
+- `operator` - Operations dashboard user with monitoring and management permissions
+- `user` - Frontend directory user (coffee browsing and rating)
+- `viewer` - Read-only access to operations dashboard
+
+**Usage:** Used in the `user_roles` table to specify user access levels for the operations dashboard and system administration.
+
 ## Enum Usage in Database Schema
 
 ### Tables Using Enums
@@ -159,6 +171,9 @@ This document describes all enumerated types (enums) used in the database schema
 | scrape_runs | status | run_status_enum |
 | sensory_params | confidence | sensory_confidence_enum |
 | sensory_params | source | sensory_source_enum |
+| user_roles | role | user_role_enum |
+| role_audit_log | old_role | user_role_enum |
+| role_audit_log | new_role | user_role_enum |
 
 ### Enum Constants
 
@@ -198,7 +213,8 @@ export const Constants = {
         "robusta_80_arabica_20",
         "arabica_chicory", "robusta_chicory", "blend_chicory", 
         "filter_coffee_mix"
-      ]
+      ],
+      user_role_enum: ["admin", "operator", "user", "viewer"]
     }
   }
 }

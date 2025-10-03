@@ -35,11 +35,11 @@ class PlatformMonitoringService:
         else:
             # Create Supabase client from environment variables
             supabase_url = os.getenv('SUPABASE_URL')
-            supabase_key = os.getenv('SUPABASE_ANON_KEY')
+            supabase_key = os.getenv('SUPABASE_KEY')
             
             if not supabase_url or not supabase_key:
                 raise ValueError(
-                    "SUPABASE_URL and SUPABASE_ANON_KEY environment variables are required"
+                    "SUPABASE_URL and SUPABASE_KEY environment variables are required"
                 )
             
             self.supabase_client = create_client(supabase_url, supabase_key)

@@ -230,6 +230,83 @@ cleanup_expired_llm_cache() -> number
 ```
 Cleans up expired entries from the LLM cache and returns the number of entries removed.
 
+## User Management Functions
+
+### get_user_role
+```sql
+get_user_role(user_uuid UUID DEFAULT auth.uid()) -> user_role_enum
+```
+Gets the role of a specific user. Defaults to the current authenticated user.
+
+### has_permission
+```sql
+has_permission(required_role user_role_enum) -> boolean
+```
+Checks if the current user has the required permission level based on role hierarchy:
+- admin: All permissions
+- operator: Admin and operator permissions
+- user: Admin, operator, and user permissions  
+- viewer: All permissions (read-only)
+
+### assign_user_role
+```sql
+assign_user_role(
+  target_user_id UUID,
+  new_role user_role_enum,
+  assigned_by UUID DEFAULT auth.uid()
+) -> boolean
+```
+Assigns a role to a user. Only admins can assign roles. Returns true on success.
+
+### get_users_with_roles
+```sql
+get_users_with_roles() -> TABLE (
+  user_id UUID,
+  email TEXT,
+  role user_role_enum,
+  created_at TIMESTAMP WITH TIME ZONE,
+  last_sign_in TIMESTAMP WITH TIME ZONE
+)
+```
+Returns all users with their roles and metadata. Only accessible by admins.
+
+## Dashboard Analytics Functions
+
+### get_price_trend_4w
+```sql
+get_price_trend_4w() -> TABLE (
+  date DATE,
+  price_updates BIGINT,
+  avg_price NUMERIC
+)
+```
+Returns price trend data for the last 4 weeks with daily aggregation.
+
+### get_roaster_performance_30d
+```sql
+get_roaster_performance_30d() -> TABLE (
+  roaster_id UUID,
+  roaster_name TEXT,
+  total_runs BIGINT,
+  successful_runs BIGINT,
+  success_rate NUMERIC,
+  avg_duration_seconds NUMERIC
+)
+```
+Returns roaster performance metrics for the last 30 days including success rates and average run duration.
+
+### get_run_statistics_30d
+```sql
+get_run_statistics_30d() -> TABLE (
+  date DATE,
+  total_runs BIGINT,
+  successful_runs BIGINT,
+  failed_runs BIGINT,
+  avg_duration_minutes NUMERIC
+)
+```
+Returns daily run statistics for the last 30 days including success/failure counts and average duration.
+
 ## Epic C Functions
 
 ### get_epic_c_parameters
@@ -314,6 +391,36 @@ SELECT rpc_insert_price(
   p_price := 450.00,
   p_variant_id := 'variant_123'
 );
+```
+
+### User Role Management
+```sql
+-- Check if current user has admin permissions
+SELECT has_permission('admin');
+
+-- Get current user's role
+SELECT get_user_role();
+
+-- Assign operator role to a user (admin only)
+SELECT assign_user_role(
+  target_user_id := 'user-uuid-here',
+  new_role := 'operator'
+);
+
+-- Get all users with their roles (admin only)
+SELECT * FROM get_users_with_roles();
+```
+
+### Dashboard Analytics
+```sql
+-- Get price trends for last 4 weeks
+SELECT * FROM get_price_trend_4w();
+
+-- Get roaster performance metrics
+SELECT * FROM get_roaster_performance_30d();
+
+-- Get daily run statistics
+SELECT * FROM get_run_statistics_30d();
 ```
 
 ## Error Handling

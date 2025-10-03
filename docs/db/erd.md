@@ -59,6 +59,15 @@ ENRICHMENTS (N) ──────── (1) ARTIFACTS
     └─── (1) LLM_CACHE (Independent)
 ```
 
+### Authentication and Authorization Relationships
+
+```
+AUTH.USERS (1) ──────── (1) USER_ROLES
+    │                      │
+    │                      │
+    └─── (N) ROLE_AUDIT_LOG ──── (1) USER_ROLES (changed_by)
+```
+
 ## Detailed Relationship Descriptions
 
 ### 1. Roasters to Coffees (One-to-Many)
@@ -159,6 +168,22 @@ ENRICHMENTS (N) ──────── (1) ARTIFACTS
 - **Purpose:** Stores cached LLM responses for performance optimization
 - **Cardinality:** Independent
 - **Referenced Relations:** None (standalone table)
+
+### 16. Users to User Roles (One-to-One)
+- **Relationship:** One user has one role assignment
+- **Foreign Key:** `user_roles.user_id` → `auth.users.id`
+- **Cardinality:** 1:1
+- **Referenced Relations:** `auth.users`
+- **Business Rule:** Each user can have only one role at a time
+
+### 17. User Roles to Role Audit Log (One-to-Many)
+- **Relationship:** One user role can have many audit log entries
+- **Foreign Keys:** 
+  - `role_audit_log.user_id` → `auth.users.id`
+  - `role_audit_log.changed_by` → `auth.users.id`
+- **Cardinality:** 1:N
+- **Referenced Relations:** `auth.users`, `user_roles`
+- **Business Rule:** All role changes are logged for audit purposes
 
 ## Database Views and Their Relationships
 
@@ -279,6 +304,10 @@ ENRICHMENTS (N) ──────── (1) ARTIFACTS
 - `product_sources.roaster_id`
 - `scrape_runs.source_id`
 - `scrape_artifacts.run_id`
+- `user_roles.user_id`
+- `user_roles.created_by`
+- `role_audit_log.user_id`
+- `role_audit_log.changed_by`
 
 ### Composite Indexes
 - `coffees(status, roaster_id)` - For filtering active coffees by roaster
@@ -292,6 +321,7 @@ ENRICHMENTS (N) ──────── (1) ARTIFACTS
 - `variants(coffee_id, grind, weight_g)` - Unique variant combinations
 - `flavor_notes(key)` - Unique flavor note keys
 - `brew_methods(key)` - Unique brew method keys
+- `user_roles(user_id)` - One role per user
 
 ## Data Integrity Rules
 
