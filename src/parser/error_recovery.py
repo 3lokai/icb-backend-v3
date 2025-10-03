@@ -65,9 +65,12 @@ class PipelineErrorRecovery:
         recoverable_errors = [
             "timeout",
             "connection",
+            "rate limit",
             "rate_limit",
             "temporary",
             "network",
+            "service unavailable",
+            "service temporarily unavailable",
             "service_unavailable"
         ]
         

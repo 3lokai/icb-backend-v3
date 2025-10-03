@@ -47,7 +47,8 @@ class FirecrawlMapService:
     async def discover_roaster_products(
         self, 
         roaster_config: RoasterConfigSchema,
-        search_terms: Optional[List[str]] = None
+        search_terms: Optional[List[str]] = None,
+        job_type: str = "full_refresh"
     ) -> Dict[str, Any]:
         """
         Discover product URLs for a roaster using Firecrawl map.
@@ -55,6 +56,7 @@ class FirecrawlMapService:
         Args:
             roaster_config: Roaster configuration
             search_terms: Optional search terms to filter URLs
+            job_type: Job type - "full_refresh" or "price_only" for Epic B integration
             
         Returns:
             Dictionary containing discovered URLs and metadata
@@ -86,9 +88,13 @@ class FirecrawlMapService:
                 'message': 'Firecrawl budget limit exceeded'
             }
         
-        # Prepare search terms
+        # Prepare search terms based on job type
         if not search_terms:
-            search_terms = self.config.coffee_keywords
+            if job_type == "price_only":
+                # Price-only mode: focus on price-relevant keywords for cost optimization
+                search_terms = self._get_price_only_keywords()
+            else:
+                search_terms = self.config.coffee_keywords
         
         # Add roaster-specific terms if available
         if hasattr(roaster_config, 'name') and roaster_config.name:
@@ -98,24 +104,30 @@ class FirecrawlMapService:
             "Starting product discovery for roaster",
             roaster_id=roaster_config.id,
             roaster_name=getattr(roaster_config, 'name', 'Unknown'),
+            job_type=job_type,
             search_terms=search_terms,
             budget_remaining=self.client.budget_tracker.get_usage_stats()['remaining_budget']
         )
         
         try:
-            # Discover product URLs
+            # Discover product URLs with job type optimization
             discovered_urls = await self.client.discover_product_urls(
                 domain=roaster_config.base_url or f"https://{roaster_config.id}.com",
-                search_terms=search_terms
+                search_terms=search_terms,
+                job_type=job_type
             )
             
-            # Validate and filter URLs
-            validated_urls = self._validate_product_urls(discovered_urls, roaster_config)
+            # Validate and filter URLs based on job type
+            if job_type == "price_only":
+                validated_urls = self._validate_price_only_urls(discovered_urls, roaster_config)
+            else:
+                validated_urls = self._validate_product_urls(discovered_urls, roaster_config)
             
             # Create result
             result = {
                 'roaster_id': roaster_config.id,
                 'roaster_name': getattr(roaster_config, 'name', 'Unknown'),
+                'job_type': job_type,
                 'discovered_urls': validated_urls,
                 'total_discovered': len(discovered_urls),
                 'validated_count': len(validated_urls),
@@ -195,6 +207,77 @@ class FirecrawlMapService:
         
         return validated_urls
     
+    def _get_price_only_keywords(self) -> List[str]:
+        """Get optimized keywords for price-only discovery to reduce costs."""
+        return [
+            'price', 'cost', 'buy', 'shop', 'store', 'cart', 'checkout',
+            'coffee', 'bean', 'roast', 'espresso', 'filter', 'ground',
+            'whole bean', 'coffee beans', 'coffee powder'
+        ]
+    
+    def _validate_price_only_urls(
+        self, 
+        urls: List[str], 
+        roaster_config: RoasterConfigSchema
+    ) -> List[str]:
+        """Validate and filter URLs specifically for price-only discovery."""
+        validated_urls = []
+        
+        for url in urls:
+            try:
+                # Basic URL validation
+                if not self._is_valid_url(url):
+                    continue
+                
+                # Domain validation
+                if not self._is_same_domain(url, roaster_config.base_url):
+                    continue
+                
+                # Price-only URL validation - focus on product pages likely to have prices
+                if not self._is_likely_price_url(url):
+                    continue
+                
+                validated_urls.append(url)
+                
+            except Exception as e:
+                logger.warning(
+                    "Price-only URL validation failed",
+                    url=url,
+                    error=str(e)
+                )
+                continue
+        
+        return validated_urls
+    
+    def _is_likely_price_url(self, url: str) -> bool:
+        """Check if URL is likely to contain price information."""
+        import re
+        
+        # Price-focused URL patterns
+        price_patterns = [
+            r'/product/', r'/products/', r'/shop/', r'/store/',
+            r'/item/', r'/coffee/', r'/beans/', r'/roast/',
+            r'/buy/', r'/purchase/', r'/order/',
+            r'\.html$', r'\.php$', r'\.asp$', r'\.aspx$'
+        ]
+        
+        # Exclude non-product patterns
+        exclude_patterns = [
+            r'/about', r'/contact', r'/blog', r'/news',
+            r'/help', r'/support', r'/faq', r'/terms',
+            r'/privacy', r'/shipping', r'/returns',
+            r'/account', r'/login', r'/register'
+        ]
+        
+        url_lower = url.lower()
+        
+        # Skip if matches exclude patterns
+        if any(re.search(pattern, url_lower) for pattern in exclude_patterns):
+            return False
+        
+        # Include if matches price patterns
+        return any(re.search(pattern, url_lower) for pattern in price_patterns)
+    
     def _is_valid_url(self, url: str) -> bool:
         """Check if URL is valid."""
         try:
@@ -245,7 +328,8 @@ class FirecrawlMapService:
     async def batch_discover_products(
         self, 
         roaster_configs: List[RoasterConfigSchema],
-        search_terms: Optional[List[str]] = None
+        search_terms: Optional[List[str]] = None,
+        job_type: str = "full_refresh"
     ) -> Dict[str, Any]:
         """
         Discover product URLs for multiple roasters in batch.
@@ -253,6 +337,7 @@ class FirecrawlMapService:
         Args:
             roaster_configs: List of roaster configurations
             search_terms: Optional search terms to filter URLs
+            job_type: Job type - "full_refresh" or "price_only" for Epic B integration
             
         Returns:
             Dictionary containing batch results
@@ -260,6 +345,7 @@ class FirecrawlMapService:
         logger.info(
             "Starting batch product discovery",
             roaster_count=len(roaster_configs),
+            job_type=job_type,
             search_terms=search_terms
         )
         
@@ -269,7 +355,7 @@ class FirecrawlMapService:
         
         for roaster_config in roaster_configs:
             try:
-                result = await self.discover_roaster_products(roaster_config, search_terms)
+                result = await self.discover_roaster_products(roaster_config, search_terms, job_type)
                 results.append(result)
                 
                 if result['status'] == 'success':
@@ -291,6 +377,7 @@ class FirecrawlMapService:
         
         batch_result = {
             'batch_timestamp': datetime.now(timezone.utc).isoformat(),
+            'job_type': job_type,
             'total_roasters': len(roaster_configs),
             'successful_discoveries': successful_discoveries,
             'total_urls_discovered': total_urls_discovered,
@@ -307,6 +394,72 @@ class FirecrawlMapService:
         )
         
         return batch_result
+    
+    async def discover_price_only_urls(
+        self, 
+        domain: str, 
+        job_type: str = "price_only"
+    ) -> List[str]:
+        """
+        Discover price-only URLs for cost optimization.
+        
+        Args:
+            domain: Domain to discover URLs from
+            job_type: Job type - "price_only" for Epic B integration
+            
+        Returns:
+            List of price-relevant URLs
+        """
+        if job_type != "price_only":
+            logger.warning(
+                "discover_price_only_urls called with non-price-only job type",
+                job_type=job_type
+            )
+            return []
+        
+        try:
+            logger.info(
+                "Starting price-only URL discovery",
+                domain=domain,
+                job_type=job_type
+            )
+            
+            # Use price-only keywords for cost optimization
+            price_keywords = self._get_price_only_keywords()
+            
+            # Discover URLs with price-only focus
+            discovered_urls = await self.client.discover_product_urls(
+                domain=domain,
+                search_terms=price_keywords,
+                job_type=job_type
+            )
+            
+            # Filter for price-relevant URLs only
+            # Create a mock roaster config for validation
+            from ..config.roaster_schema import RoasterConfigSchema
+            mock_roaster_config = RoasterConfigSchema(
+                id="temp",
+                base_url=f"https://{domain}"
+            )
+            price_urls = self._validate_price_only_urls(discovered_urls, mock_roaster_config)
+            
+            logger.info(
+                "Price-only URL discovery completed",
+                domain=domain,
+                total_discovered=len(discovered_urls),
+                price_relevant=len(price_urls),
+                cost_optimization=f"{len(price_urls)/max(len(discovered_urls), 1)*100:.1f}%"
+            )
+            
+            return price_urls
+            
+        except Exception as e:
+            logger.error(
+                "Price-only URL discovery failed",
+                domain=domain,
+                error=str(e)
+            )
+            return []
     
     async def get_service_status(self) -> Dict[str, Any]:
         """Get service status and health information."""

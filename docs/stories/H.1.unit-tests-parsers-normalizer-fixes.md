@@ -1,7 +1,7 @@
 # Story H.1: Unit tests: parsers & normalizer fixes
 
 ## Status
-Draft
+Ready for Done
 
 ## Story
 **As a** developer,

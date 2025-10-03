@@ -41,6 +41,10 @@ class ReviewWorkflow:
         self.config = config
         self.notification_config = notification_config or NotificationConfig()
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        
+        # Initialize notification attributes
+        self.slack_webhook_url = getattr(self.notification_config, 'slack_webhook_url', None)
+        self.email_config = getattr(self.notification_config, 'email_config', None)
     
     def mark_for_review(self, artifact: Dict, llm_result: LLMResult, evaluation: ConfidenceEvaluation) -> ReviewItem:
         """Mark artifact for manual review due to low confidence."""
@@ -224,10 +228,10 @@ class ReviewWorkflow:
             if response.status_code == 200:
                 self.logger.debug("Slack notification sent successfully")
             else:
-                self.logger.warning("Slack notification failed", status_code=response.status_code, response=response.text)
+                self.logger.warning(f"Slack notification failed: status_code={response.status_code}, response={response.text}")
                 
         except Exception as e:
-            self.logger.error("Failed to send Slack notification", error=str(e))
+            self.logger.error(f"Failed to send Slack notification: {str(e)}")
             # Fallback to logging
             self.logger.info(f"Slack notification (fallback): {message}")
     

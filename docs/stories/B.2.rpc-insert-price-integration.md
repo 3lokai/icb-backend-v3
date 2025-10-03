@@ -1,7 +1,7 @@
 # Story B.2: RPC insert_price integration and variant price updates
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** system administrator,

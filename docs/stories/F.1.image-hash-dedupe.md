@@ -1,7 +1,7 @@
 # Story F.1: Image hash & dedupe
 
 ## Status
-Ready for Done
+Done
 
 ## Pattern Alignment Update
 **Updated**: F.1 now follows A.1-A.5 patterns:

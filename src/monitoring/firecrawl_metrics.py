@@ -47,6 +47,111 @@ class FirecrawlMetrics:
         
         logger.info("Firecrawl metrics initialized")
     
+    def record_price_only_usage(
+        self,
+        urls_processed: int,
+        successful_extractions: int,
+        cost: float,
+        cost_efficiency: float
+    ):
+        """
+        Record price-only usage metrics.
+        
+        Args:
+            urls_processed: Number of URLs processed
+            successful_extractions: Number of successful extractions
+            cost: Cost of the operation
+            cost_efficiency: Cost efficiency ratio
+        """
+        try:
+            # Initialize price-only metrics if not exists
+            if 'price_only_metrics' not in self.metrics:
+                self.metrics['price_only_metrics'] = {
+                    'total_operations': 0,
+                    'total_urls_processed': 0,
+                    'total_successful_extractions': 0,
+                    'total_cost': 0.0,
+                    'average_cost_efficiency': 0.0,
+                    'cost_optimization_percentage': 0.0
+                }
+            
+            # Update price-only metrics
+            price_only_metrics = self.metrics['price_only_metrics']
+            price_only_metrics['total_operations'] += 1
+            price_only_metrics['total_urls_processed'] += urls_processed
+            price_only_metrics['total_successful_extractions'] += successful_extractions
+            price_only_metrics['total_cost'] += cost
+            
+            # Calculate running average cost efficiency
+            total_operations = price_only_metrics['total_operations']
+            total_urls = price_only_metrics['total_urls_processed']
+            total_successful = price_only_metrics['total_successful_extractions']
+            
+            price_only_metrics['average_cost_efficiency'] = total_successful / max(total_urls, 1)
+            
+            # Calculate cost optimization percentage
+            # Assume full refresh costs 3x more than price-only
+            full_refresh_equivalent_cost = price_only_metrics['total_cost'] * 3
+            cost_savings = full_refresh_equivalent_cost - price_only_metrics['total_cost']
+            price_only_metrics['cost_optimization_percentage'] = (
+                cost_savings / max(full_refresh_equivalent_cost, 1)
+            ) * 100
+            
+            logger.info(
+                "Recorded price-only usage metrics",
+                urls_processed=urls_processed,
+                successful_extractions=successful_extractions,
+                cost=cost,
+                cost_efficiency=cost_efficiency,
+                total_operations=total_operations,
+                cost_optimization_percentage=price_only_metrics['cost_optimization_percentage']
+            )
+            
+        except Exception as e:
+            logger.error(
+                "Failed to record price-only usage metrics",
+                error=str(e),
+                urls_processed=urls_processed,
+                successful_extractions=successful_extractions,
+                cost=cost
+            )
+    
+    def get_price_only_metrics(self) -> Dict[str, Any]:
+        """Get price-only metrics summary."""
+        try:
+            if 'price_only_metrics' not in self.metrics:
+                return {
+                    'total_operations': 0,
+                    'total_urls_processed': 0,
+                    'total_successful_extractions': 0,
+                    'total_cost': 0.0,
+                    'average_cost_efficiency': 0.0,
+                    'cost_optimization_percentage': 0.0,
+                    'status': 'No price-only operations recorded'
+                }
+            
+            price_only_metrics = self.metrics['price_only_metrics']
+            
+            return {
+                'total_operations': price_only_metrics['total_operations'],
+                'total_urls_processed': price_only_metrics['total_urls_processed'],
+                'total_successful_extractions': price_only_metrics['total_successful_extractions'],
+                'total_cost': price_only_metrics['total_cost'],
+                'average_cost_efficiency': price_only_metrics['average_cost_efficiency'],
+                'cost_optimization_percentage': price_only_metrics['cost_optimization_percentage'],
+                'status': 'Price-only metrics available'
+            }
+            
+        except Exception as e:
+            logger.error(
+                "Failed to get price-only metrics",
+                error=str(e)
+            )
+            return {
+                'error': str(e),
+                'status': 'Error retrieving price-only metrics'
+            }
+    
     def record_map_operation(
         self,
         roaster_id: str,
@@ -253,6 +358,82 @@ class FirecrawlAlertManager:
         
         logger.info("Firecrawl alert manager initialized")
     
+    async def send_price_only_efficiency_alert(
+        self,
+        cost_efficiency: float,
+        threshold: float
+    ):
+        """
+        Send alert for low price-only efficiency.
+        
+        Args:
+            cost_efficiency: Current cost efficiency ratio
+            threshold: Efficiency threshold
+        """
+        try:
+            alert = {
+                'type': 'price_only_efficiency',
+                'severity': 'warning',
+                'message': f'Price-only efficiency below threshold: {cost_efficiency:.2f} < {threshold}',
+                'cost_efficiency': cost_efficiency,
+                'threshold': threshold,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+            
+            self.active_alerts.append(alert)
+            
+            logger.warning(
+                "Price-only efficiency alert triggered",
+                cost_efficiency=cost_efficiency,
+                threshold=threshold
+            )
+            
+        except Exception as e:
+            logger.error(
+                "Failed to send price-only efficiency alert",
+                error=str(e),
+                cost_efficiency=cost_efficiency,
+                threshold=threshold
+            )
+    
+    async def send_price_only_cost_alert(
+        self,
+        cost: float,
+        threshold: float
+    ):
+        """
+        Send alert for high price-only cost.
+        
+        Args:
+            cost: Current cost
+            threshold: Cost threshold
+        """
+        try:
+            alert = {
+                'type': 'price_only_cost',
+                'severity': 'warning',
+                'message': f'Price-only cost above threshold: ${cost:.2f} > ${threshold}',
+                'cost': cost,
+                'threshold': threshold,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
+            
+            self.active_alerts.append(alert)
+            
+            logger.warning(
+                "Price-only cost alert triggered",
+                cost=cost,
+                threshold=threshold
+            )
+            
+        except Exception as e:
+            logger.error(
+                "Failed to send price-only cost alert",
+                error=str(e),
+                cost=cost,
+                threshold=threshold
+            )
+    
     def check_alerts(self) -> List[Dict[str, Any]]:
         """Check for alert conditions."""
         alerts = []
@@ -269,9 +450,19 @@ class FirecrawlAlertManager:
                 'current_value': failure_rate
             })
         
-        # Check budget usage (if we have budget limit info)
-        # This would need to be passed in from configuration
-        # For now, we'll skip this check
+        # Check budget usage
+        budget_used = summary['budget']['total_budget_used']
+        budget_limit = self.metrics.metrics.get('budget_limit')
+        if budget_limit and budget_used > 0:
+            budget_usage_percent = (budget_used / budget_limit) * 100
+            if budget_usage_percent > self.alert_thresholds['budget_usage_percent']:
+                alerts.append({
+                    'type': 'budget_near_exhaustion',
+                    'severity': 'warning' if budget_usage_percent < 95 else 'critical',
+                    'message': f'Budget usage high: {budget_usage_percent:.1f}%',
+                    'threshold': self.alert_thresholds['budget_usage_percent'],
+                    'current_value': budget_usage_percent
+                })
         
         # Check operation time
         avg_time = summary['performance']['average_operation_time_seconds']
@@ -282,6 +473,18 @@ class FirecrawlAlertManager:
                 'message': f'Slow operations: {avg_time:.1f}s average',
                 'threshold': self.alert_thresholds['operation_time_seconds'],
                 'current_value': avg_time
+            })
+        
+        # Check for no URLs discovered in recent operations
+        total_urls = summary['discovery']['total_urls_discovered']
+        total_operations = summary['overview']['total_operations']
+        if total_operations >= 5 and total_urls == 0:  # At least 5 operations with no URLs
+            alerts.append({
+                'type': 'no_urls_discovered',
+                'severity': 'warning',
+                'message': f'No URLs discovered in {total_operations} operations',
+                'threshold': 0,
+                'current_value': total_urls
             })
         
         # Update active alerts

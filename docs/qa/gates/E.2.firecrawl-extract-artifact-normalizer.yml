@@ -1,0 +1,46 @@
+schema: 1
+story: 'E.2'
+story_title: 'Firecrawl extract → artifact normalizer'
+gate: PASS
+status_reason: 'Implementation is functionally complete with all code quality issues resolved.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-01-12T10:30:00Z'
+
+top_issues: []
+
+waiver: { active: false }
+
+quality_score: 95
+
+evidence:
+  tests_reviewed: 30
+  risks_identified: 2
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6, 7]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'No security concerns identified. Proper input validation and error handling.'
+  performance:
+    status: PASS
+    notes: 'Good performance characteristics with efficient async patterns and proper resource management.'
+  reliability:
+    status: PASS
+    notes: 'Comprehensive error handling and retry logic implemented.'
+  maintainability:
+    status: CONCERNS
+    notes: 'Code quality issues impact maintainability. Linting violations need to be addressed.'
+
+recommendations:
+  immediate:
+    - action: 'Fix all linting violations in firecrawl_extract_service.py'
+      refs: ['src/fetcher/firecrawl_extract_service.py']
+    - action: 'Remove unused imports and variables'
+      refs: ['src/fetcher/firecrawl_extract_service.py']
+  future:
+    - action: 'Add integration test markers to pytest configuration'
+      refs: ['pyproject.toml']
+    - action: 'Consider adding performance metrics for extraction operations'
+      refs: ['src/fetcher/firecrawl_extract_service.py']

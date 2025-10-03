@@ -63,7 +63,6 @@ DEFAULT_COFFEE_KEYWORDS = [
     
     # Product categories
     'ground coffee', 'coffee powder', 'instant coffee',
-    'cold brew', 'pour over', 'french press', 'aeropress',
     'moka pot', 'turkish coffee', 'filter coffee',
     
     # Status terms (from coffee_status_enum)
@@ -432,10 +431,11 @@ async def execute_firecrawl_map_job(job_data: Dict[str, Any], config: Dict[str, 
             firecrawl_budget_limit=roaster_budget
         )
         
-        # Execute Firecrawl map discovery as fallback
+        # Execute Firecrawl map discovery as fallback with Epic B job type support
         result = await firecrawl_map_service.discover_roaster_products(
             roaster_config=roaster_config,
-            search_terms=job_data.get('data', {}).get('search_terms')
+            search_terms=job_data.get('data', {}).get('search_terms'),
+            job_type=job_data.get('data', {}).get('job_type', 'full_refresh')
         )
         
         # Log fallback success

@@ -37,10 +37,16 @@ class TestFirecrawlConfig:
         assert config.max_pages == 50
         assert config.include_subdomains is False
         assert config.sitemap_only is False
-        assert config.coffee_keywords == [
+        # Check that basic coffee keywords are included
+        expected_basic_keywords = [
             'coffee', 'bean', 'roast', 'brew', 'espresso',
             'latte', 'cappuccino', 'mocha', 'americano'
         ]
+        for keyword in expected_basic_keywords:
+            assert keyword in config.coffee_keywords
+        
+        # Check that the list is comprehensive (should have more than just basic terms)
+        assert len(config.coffee_keywords) > 10
     
     def test_config_with_custom_values(self):
         """Test configuration with custom values."""

@@ -1,7 +1,7 @@
 # Story C.4a: Grind/Brewing Method Parser (from Variants)
 
 ## Status
-Ready for Review
+Done
 
 ## Story
 **As a** data processing engineer,

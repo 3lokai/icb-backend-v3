@@ -354,10 +354,11 @@ class PlatformFetcherService:
     ) -> FetcherResult:
         """Execute Firecrawl fetcher."""
         try:
-            # Execute Firecrawl map discovery
+            # Execute Firecrawl map discovery with Epic B job type support
             result = await service.discover_roaster_products(
                 roaster_config=self.roaster_config,
-                search_terms=kwargs.get('search_terms')
+                search_terms=kwargs.get('search_terms'),
+                job_type=job_type
             )
             
             if result.get('status') == 'success' and result.get('discovered_urls'):

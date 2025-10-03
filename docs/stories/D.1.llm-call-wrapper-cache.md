@@ -1,7 +1,7 @@
 # Story D.1: LLM call wrapper & cache
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** data processing engineer,

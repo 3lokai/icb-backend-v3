@@ -1,7 +1,7 @@
 # Story A.4: RPC upsert integration (rpc_upsert_coffee + rpc_upsert_variant)
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** system administrator,

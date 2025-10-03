@@ -119,13 +119,8 @@ class TestPlatformFetcherService:
         """Test successful Shopify fetcher cascade."""
         # Mock Shopify fetcher success
         mock_shopify_fetcher = AsyncMock()
-        mock_shopify_fetcher.fetch_products.return_value = FetcherResult(
-            success=True,
-            products=[{"id": "1", "name": "Test Coffee"}],
-            platform="shopify",
-            should_update_platform=True,
-            error=None
-        )
+        mock_shopify_fetcher.test_connection.return_value = True
+        mock_shopify_fetcher.fetch_all_products.return_value = [{"id": "1", "name": "Test Coffee"}]
         
         with patch.object(platform_service, '_get_shopify_fetcher', return_value=mock_shopify_fetcher):
             result = await platform_service.fetch_products_with_cascade("full_refresh")
@@ -141,23 +136,12 @@ class TestPlatformFetcherService:
         """Test Shopify failure with WooCommerce success."""
         # Mock Shopify fetcher failure
         mock_shopify_fetcher = AsyncMock()
-        mock_shopify_fetcher.fetch_products.return_value = FetcherResult(
-            success=False,
-            products=[],
-            platform="shopify",
-            should_update_platform=False,
-            error="Shopify API error"
-        )
+        mock_shopify_fetcher.test_connection.return_value = False
         
         # Mock WooCommerce fetcher success
         mock_woocommerce_fetcher = AsyncMock()
-        mock_woocommerce_fetcher.fetch_products.return_value = FetcherResult(
-            success=True,
-            products=[{"id": "2", "name": "WooCommerce Coffee"}],
-            platform="woocommerce",
-            should_update_platform=True,
-            error=None
-        )
+        mock_woocommerce_fetcher.test_connection.return_value = True
+        mock_woocommerce_fetcher.fetch_all_products.return_value = [{"id": "2", "name": "WooCommerce Coffee"}]
         
         with patch.object(platform_service, '_get_shopify_fetcher', return_value=mock_shopify_fetcher), \
              patch.object(platform_service, '_get_woocommerce_fetcher', return_value=mock_woocommerce_fetcher):
@@ -175,22 +159,10 @@ class TestPlatformFetcherService:
         """Test all standard fetchers fail but Firecrawl succeeds."""
         # Mock both standard fetchers to fail
         mock_shopify_fetcher = AsyncMock()
-        mock_shopify_fetcher.fetch_products.return_value = FetcherResult(
-            success=False,
-            products=[],
-            platform="shopify",
-            should_update_platform=False,
-            error="Shopify API error"
-        )
+        mock_shopify_fetcher.test_connection.return_value = False
         
         mock_woocommerce_fetcher = AsyncMock()
-        mock_woocommerce_fetcher.fetch_products.return_value = FetcherResult(
-            success=False,
-            products=[],
-            platform="woocommerce",
-            should_update_platform=False,
-            error="WooCommerce API error"
-        )
+        mock_woocommerce_fetcher.test_connection.return_value = False
         
         # Mock Firecrawl fallback success
         with patch.object(platform_service, '_get_shopify_fetcher', return_value=mock_shopify_fetcher), \
@@ -218,22 +190,10 @@ class TestPlatformFetcherService:
         """Test all fetchers fail including Firecrawl."""
         # Mock all fetchers to fail
         mock_shopify_fetcher = AsyncMock()
-        mock_shopify_fetcher.fetch_products.return_value = FetcherResult(
-            success=False,
-            products=[],
-            platform="shopify",
-            should_update_platform=False,
-            error="Shopify API error"
-        )
+        mock_shopify_fetcher.test_connection.return_value = False
         
         mock_woocommerce_fetcher = AsyncMock()
-        mock_woocommerce_fetcher.fetch_products.return_value = FetcherResult(
-            success=False,
-            products=[],
-            platform="woocommerce",
-            should_update_platform=False,
-            error="WooCommerce API error"
-        )
+        mock_woocommerce_fetcher.test_connection.return_value = False
         
         with patch.object(platform_service, '_get_shopify_fetcher', return_value=mock_shopify_fetcher), \
              patch.object(platform_service, '_get_woocommerce_fetcher', return_value=mock_woocommerce_fetcher), \
@@ -285,7 +245,7 @@ class TestPlatformFetcherService:
             assert result.success is False
             assert result.platform == "firecrawl"
             assert result.should_update_platform is False
-            assert "Firecrawl fallback failed" in result.error
+            assert "Firecrawl API error" in result.error
     
     @pytest.mark.asyncio
     async def test_close_cleanup(self, platform_service):
@@ -299,8 +259,8 @@ class TestPlatformFetcherService:
         
         await platform_service.close()
         
-        mock_shopify_fetcher.close.assert_called_once()
-        mock_woocommerce_fetcher.close.assert_called_once()
+        mock_shopify_fetcher.__aexit__.assert_called_once()
+        mock_woocommerce_fetcher.__aexit__.assert_called_once()
     
     def test_fetcher_result_creation(self):
         """Test FetcherResult creation and properties."""
@@ -388,24 +348,12 @@ class TestPlatformFetcherServiceIntegration:
                 
                 # Mock Shopify failure
                 mock_shopify_fetcher = AsyncMock()
-                mock_shopify_fetcher.fetch_products.return_value = FetcherResult(
-                    success=False,
-                    products=[],
-                    platform="shopify",
-                    should_update_platform=False,
-                    error="Shopify not available"
-                )
+                mock_shopify_fetcher.test_connection.return_value = False
                 mock_shopify.return_value = mock_shopify_fetcher
                 
                 # Mock WooCommerce failure
                 mock_woocommerce_fetcher = AsyncMock()
-                mock_woocommerce_fetcher.fetch_products.return_value = FetcherResult(
-                    success=False,
-                    products=[],
-                    platform="woocommerce",
-                    should_update_platform=False,
-                    error="WooCommerce not available"
-                )
+                mock_woocommerce_fetcher.test_connection.return_value = False
                 mock_woocommerce.return_value = mock_woocommerce_fetcher
                 
                 # Mock Firecrawl success

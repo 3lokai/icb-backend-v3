@@ -1,7 +1,7 @@
 # Story G.1: Metrics exporter & dashboards
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** system administrator,

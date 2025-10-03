@@ -79,14 +79,14 @@ class TestErrorRecovery:
 
     def test_llm_failure_recovery(self, error_recovery):
         """Test recovery from LLM service failures."""
-        # Test LLM failure recovery
+        # Test LLM failure recovery - "service unavailable" is recoverable, so should retry
         recovery_decision = error_recovery.recover_from_llm_failure(
             "weight", Exception("LLM service unavailable")
         )
         
-        assert recovery_decision.action == RecoveryAction.FAIL
-        assert recovery_decision.should_retry is False
-        assert "Non-recoverable LLM error for weight" in recovery_decision.message
+        assert recovery_decision.action == RecoveryAction.RETRY
+        assert recovery_decision.should_retry is True
+        assert "Retrying LLM field weight" in recovery_decision.reason
 
     def test_retry_mechanism(self, error_recovery):
         """Test retry mechanism with backoff."""

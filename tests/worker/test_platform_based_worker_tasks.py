@@ -9,7 +9,7 @@ import asyncio
 from unittest.mock import Mock, AsyncMock, patch
 from typing import Dict, Any
 
-from src.worker.tasks import execute_scraping_job, _update_roaster_platform
+from src.worker.tasks import execute_scraping_job, _update_roaster_platform, execute_firecrawl_map_job
 from src.config.roaster_schema import RoasterConfigSchema
 
 
@@ -247,7 +247,8 @@ class TestPlatformBasedWorkerTasks:
         # Test with minimal configuration
         minimal_config = {
             "roaster_name": "Test Roaster",
-            "base_url": "https://test-roaster.com"
+            "base_url": "https://test-roaster.com",
+            "use_firecrawl_fallback": False  # Disable Firecrawl to test minimal config
         }
         
         with patch('src.worker.tasks.PlatformFetcherService') as mock_service_class:
@@ -277,7 +278,7 @@ class TestPlatformBasedWorkerTasks:
                 
                 # Check default values were applied
                 assert roaster_config.platform is None  # No platform specified
-                assert roaster_config.use_firecrawl_fallback is True  # Default
+                assert roaster_config.use_firecrawl_fallback is False  # Explicitly set to False
                 assert roaster_config.firecrawl_budget_limit == 10  # Default
 
 
@@ -304,7 +305,8 @@ class TestPlatformBasedWorkerTasksPerformance:
             "retry_delay": 0.1,
             "politeness_delay": 0.1,
             "jitter_range": 0.05,
-            "max_concurrent": 1
+            "max_concurrent": 1,
+            "FIRECRAWL_API_KEY": "test-api-key-12345"
         }
         
         with patch('src.worker.tasks.PlatformFetcherService') as mock_service_class:
@@ -360,7 +362,8 @@ class TestPlatformBasedWorkerTasksPerformance:
             "retry_delay": 0.1,
             "politeness_delay": 0.1,
             "jitter_range": 0.05,
-            "max_concurrent": 2
+            "max_concurrent": 2,
+            "FIRECRAWL_API_KEY": "test-api-key-12345"
         }
         
         with patch('src.worker.tasks.PlatformFetcherService') as mock_service_class:
@@ -392,3 +395,164 @@ class TestPlatformBasedWorkerTasksPerformance:
                 assert results[1]["status"] == "completed"
                 assert results[0]["platform"] == "shopify"
                 assert results[1]["platform"] == "shopify"
+
+
+class TestWorkerTasksEpicBIntegration:
+    """Test Epic B integration features for worker tasks."""
+    
+    @pytest.fixture
+    def mock_config(self):
+        """Create a mock configuration."""
+        return {
+            'database': {'url': 'sqlite:///:memory:'},
+            'firecrawl': {
+                'api_key': 'test_key',
+                'budget_limit': 1000
+            },
+            'monitoring': {'enabled': True},
+            'FIRECRAWL_API_KEY': 'test_api_key_1234567890',
+            'firecrawl_budget_limit': 1000
+        }
+    
+    @pytest.mark.asyncio
+    async def test_firecrawl_map_job_with_epic_b_job_type(self, mock_config):
+        """Test Firecrawl map job with Epic B job_type parameter."""
+        job_data = {
+            'job_id': 'test_job_123',
+            'roaster_id': 'test_roaster',
+            'platform': 'firecrawl',
+            'job_type': 'map_discovery',
+            'data': {
+                'job_type': 'price_only',  # Epic B price-only mode
+                'search_terms': ['coffee', 'beans']
+            }
+        }
+        
+        with patch('src.worker.tasks.FirecrawlMapService') as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service.discover_roaster_products.return_value = {
+                'roaster_id': 'test_roaster',
+                'job_type': 'price_only',
+                'discovered_urls': ['https://example.com/coffee/beans'],
+                'status': 'success'
+            }
+            mock_service_class.return_value = mock_service
+            
+            # Execute the job
+            result = await execute_firecrawl_map_job(job_data, mock_config)
+            
+            # Verify job_type was passed to the service
+            mock_service.discover_roaster_products.assert_called_once()
+            call_args = mock_service.discover_roaster_products.call_args
+            assert call_args[1]['job_type'] == 'price_only'
+            
+            # Verify result includes job_type
+            assert result['status'] == 'completed'
+            assert result['job_type'] == 'price_only'
+    
+    @pytest.mark.asyncio
+    async def test_firecrawl_map_job_full_refresh_mode(self, mock_config):
+        """Test Firecrawl map job with full refresh mode."""
+        job_data = {
+            'job_id': 'test_job_124',
+            'roaster_id': 'test_roaster',
+            'platform': 'firecrawl',
+            'job_type': 'map_discovery',
+            'data': {
+                'job_type': 'full_refresh',  # Full refresh mode
+                'search_terms': ['coffee', 'beans']
+            }
+        }
+        
+        with patch('src.worker.tasks.FirecrawlMapService') as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service.discover_roaster_products.return_value = {
+                'roaster_id': 'test_roaster',
+                'job_type': 'full_refresh',
+                'discovered_urls': ['https://example.com/coffee/beans'],
+                'status': 'success'
+            }
+            mock_service_class.return_value = mock_service
+            
+            # Execute the job
+            result = await execute_firecrawl_map_job(job_data, mock_config)
+            
+            # Verify job_type was passed to the service
+            mock_service.discover_roaster_products.assert_called_once()
+            call_args = mock_service.discover_roaster_products.call_args
+            assert call_args[1]['job_type'] == 'full_refresh'
+            
+            # Verify result includes job_type
+            assert result['status'] == 'completed'
+            assert result['job_type'] == 'full_refresh'
+    
+    @pytest.mark.asyncio
+    async def test_firecrawl_map_job_default_job_type(self, mock_config):
+        """Test Firecrawl map job with default job_type when not specified."""
+        job_data = {
+            'job_id': 'test_job_125',
+            'roaster_id': 'test_roaster',
+            'platform': 'firecrawl',
+            'job_type': 'map_discovery',
+            'data': {
+                # No job_type specified - should default to 'full_refresh'
+                'search_terms': ['coffee', 'beans']
+            }
+        }
+        
+        with patch('src.worker.tasks.FirecrawlMapService') as mock_service_class:
+            mock_service = AsyncMock()
+            mock_service.discover_roaster_products.return_value = {
+                'roaster_id': 'test_roaster',
+                'job_type': 'full_refresh',
+                'discovered_urls': ['https://example.com/coffee/beans'],
+                'status': 'success'
+            }
+            mock_service_class.return_value = mock_service
+            
+            # Execute the job
+            result = await execute_firecrawl_map_job(job_data, mock_config)
+            
+            # Verify default job_type was used
+            mock_service.discover_roaster_products.assert_called_once()
+            call_args = mock_service.discover_roaster_products.call_args
+            assert call_args[1]['job_type'] == 'full_refresh'
+            
+            # Verify result includes job_type
+            assert result['status'] == 'completed'
+    
+    @pytest.mark.asyncio
+    async def test_platform_fetcher_service_epic_b_integration(self, mock_config):
+        """Test platform fetcher service with Epic B job_type integration."""
+        job_data = {
+            'job_id': 'test_job_126',
+            'roaster_id': 'test_roaster',
+            'platform': 'shopify',
+            'job_type': 'scraping',
+            'data': {
+                'job_type': 'price_only',  # Epic B price-only mode
+                'search_terms': ['coffee', 'beans']
+            }
+        }
+        
+        with patch('src.worker.tasks.PlatformFetcherService') as mock_service_class:
+            mock_service = AsyncMock()
+            mock_result = Mock()
+            mock_result.success = True
+            mock_result.platform = 'shopify'
+            mock_result.products = []
+            mock_result.roaster_id = 'test_roaster'
+            mock_result.job_type = 'price_only'
+            mock_service.fetch_products_with_cascade.return_value = mock_result
+            mock_service_class.return_value = mock_service
+            
+            # Execute the job
+            result = await execute_scraping_job(job_data, mock_config)
+            
+            # Verify job_type was passed to the service
+            mock_service.fetch_products_with_cascade.assert_called_once()
+            call_kwargs = mock_service.fetch_products_with_cascade.call_args[1]
+            assert call_kwargs['job_type'] == 'price_only'
+            
+            # Verify result includes job_type
+            assert result['status'] == 'completed'

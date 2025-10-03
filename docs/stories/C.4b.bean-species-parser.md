@@ -1,7 +1,7 @@
 # Story C.4b: Bean Species Parser (from Content)
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** data processing engineer,

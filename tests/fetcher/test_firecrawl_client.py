@@ -339,3 +339,123 @@ class TestFirecrawlClientErrors:
         error = FirecrawlRateLimitError("Rate limit exceeded")
         assert str(error) == "Rate limit exceeded"
         assert isinstance(error, FirecrawlError)
+
+
+class TestFirecrawlClientEpicBIntegration:
+    """Test Epic B integration features for Firecrawl client."""
+    
+    @pytest.fixture
+    def mock_config(self):
+        """Create a mock Firecrawl configuration."""
+        return FirecrawlConfig(
+            api_key="test_api_key_1234567890",
+            base_url="https://api.firecrawl.dev",
+            budget_limit=1000,
+            max_pages=50,
+            include_subdomains=False,
+            sitemap_only=False,
+            coffee_keywords=['coffee', 'bean', 'roast'],
+            timeout=30.0,
+            max_retries=3,
+            retry_delay=1.0,
+            enable_monitoring=True,
+            log_level="INFO"
+        )
+    
+    @pytest.fixture
+    def firecrawl_client(self, mock_config):
+        """Create a Firecrawl client with mock configuration."""
+        return FirecrawlClient(mock_config)
+    
+    @pytest.mark.asyncio
+    async def test_map_domain_price_only_optimization(self, firecrawl_client):
+        """Test Epic B price-only optimization in map_domain."""
+        with patch.object(firecrawl_client, '_make_request_with_retry') as mock_request:
+            mock_request.return_value = {
+                'links': [
+                    'https://example.com/coffee/beans',
+                    'https://example.com/products/roast',
+                    'https://example.com/about'
+                ]
+            }
+            
+            # Test price-only mode
+            result = await firecrawl_client.map_domain(
+                "https://example.com", 
+                ["coffee"], 
+                job_type="price_only"
+            )
+            
+            # Verify price-only optimization was applied
+            assert result['domain'] == "https://example.com"
+            assert 'total_links' in result
+            assert 'filtered_urls' in result
+    
+    @pytest.mark.asyncio
+    async def test_map_domain_full_refresh_mode(self, firecrawl_client):
+        """Test full refresh mode in map_domain."""
+        with patch.object(firecrawl_client, '_make_request_with_retry') as mock_request:
+            mock_request.return_value = {
+                'links': [
+                    'https://example.com/coffee/beans',
+                    'https://example.com/products/roast',
+                    'https://example.com/about'
+                ]
+            }
+            
+            # Test full refresh mode
+            result = await firecrawl_client.map_domain(
+                "https://example.com", 
+                ["coffee"], 
+                job_type="full_refresh"
+            )
+            
+            # Verify full refresh mode was applied
+            assert result['domain'] == "https://example.com"
+            assert 'total_links' in result
+            assert 'filtered_urls' in result
+    
+    @pytest.mark.asyncio
+    async def test_discover_product_urls_with_job_type(self, firecrawl_client):
+        """Test discover_product_urls with Epic B job_type parameter."""
+        with patch.object(firecrawl_client, 'map_domain') as mock_map:
+            mock_map.return_value = {
+                'domain': 'https://example.com',
+                'total_links': 3,
+                'filtered_urls': ['https://example.com/coffee/beans'],
+                'coffee_urls': ['https://example.com/coffee/beans'],
+                'product_urls': ['https://example.com/coffee/beans'],
+                'metadata': {}
+            }
+            
+            # Test with price_only job type
+            urls = await firecrawl_client.discover_product_urls(
+                "https://example.com",
+                ["coffee"],
+                job_type="price_only"
+            )
+            
+            # Verify map_domain was called with correct job_type
+            mock_map.assert_called_once_with(
+                "https://example.com",
+                ["coffee"],
+                "price_only"
+            )
+            assert isinstance(urls, list)
+    
+    def test_price_only_parameter_optimization(self, firecrawl_client):
+        """Test that price_only mode applies correct parameter optimization."""
+        # Test the parameter optimization logic
+        with patch.object(firecrawl_client, '_make_request_with_retry') as mock_request:
+            mock_request.return_value = {'links': []}
+            
+            # This should trigger the price-only optimization in map_domain
+            import asyncio
+            asyncio.run(firecrawl_client.map_domain(
+                "https://example.com",
+                ["coffee"],
+                job_type="price_only"
+            ))
+            
+            # Verify the request was made (optimization applied internally)
+            assert mock_request.called

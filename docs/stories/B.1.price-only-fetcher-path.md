@@ -1,7 +1,7 @@
 # Story B.1: Price-only fetcher path
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** system administrator,
@@ -18,26 +18,26 @@ Ready for Done
 7. Performance is significantly faster than full product fetches
 
 ## Tasks / Subtasks
-- [ ] Task 1: Add job type flag and configuration (AC: 5)
-  - [ ] Add `job_type` parameter to fetcher configuration
-  - [ ] Implement price-only mode in fetcher service
-  - [ ] Add job type validation and routing logic
-  - [ ] Update scheduler to support price-only job scheduling
-- [ ] Task 2: Implement lightweight price parser (AC: 2, 3)
-  - [ ] Create price-only parser that extracts minimal fields
-  - [ ] Implement price delta detection logic
-  - [ ] Add variant price comparison with existing database values
-  - [ ] Handle currency normalization and price formatting
-- [ ] Task 3: Handle missing list endpoints (AC: 4)
-  - [ ] Implement fallback to per-product handle fetching
-  - [ ] Add endpoint availability detection
-  - [ ] Create product handle lookup from existing database
-  - [ ] Implement graceful degradation for missing endpoints
-- [ ] Task 4: Integration with existing fetcher infrastructure (AC: 1, 6, 7)
-  - [ ] Extend existing fetcher service with price-only mode
-  - [ ] Integrate with A.2 storage system for price data
-  - [ ] Add performance monitoring and metrics
-  - [ ] Test with sample roasters and verify speed improvements
+- [x] Task 1: Add job type flag and configuration (AC: 5)
+  - [x] Add `job_type` parameter to fetcher configuration
+  - [x] Implement price-only mode in fetcher service
+  - [x] Add job type validation and routing logic
+  - [x] Update scheduler to support price-only job scheduling
+- [x] Task 2: Implement lightweight price parser (AC: 2, 3)
+  - [x] Create price-only parser that extracts minimal fields
+  - [x] Implement price delta detection logic
+  - [x] Add variant price comparison with existing database values
+  - [x] Handle currency normalization and price formatting
+- [x] Task 3: Handle missing list endpoints (AC: 4)
+  - [x] Implement fallback to per-product handle fetching
+  - [x] Add endpoint availability detection
+  - [x] Create product handle lookup from existing database
+  - [x] Implement graceful degradation for missing endpoints
+- [x] Task 4: Integration with existing fetcher infrastructure (AC: 1, 6, 7)
+  - [x] Extend existing fetcher service with price-only mode
+  - [x] Integrate with A.2 storage system for price data
+  - [x] Add performance monitoring and metrics
+  - [x] Test with sample roasters and verify speed improvements
 
 ## Dev Notes
 

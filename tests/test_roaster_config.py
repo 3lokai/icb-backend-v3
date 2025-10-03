@@ -249,7 +249,7 @@ class TestRoasterConfigDefaults:
         
         assert config['default_concurrency'] == 5
         assert config['use_firecrawl_fallback'] is True
-        assert config['firecrawl_budget_limit'] == 2000
+        assert config['firecrawl_budget_limit'] == 10
         assert config['use_llm'] is True
         assert config['alert_price_delta_pct'] == 15.0
     
@@ -259,7 +259,7 @@ class TestRoasterConfigDefaults:
         
         assert config['default_concurrency'] == 1
         assert config['use_firecrawl_fallback'] is False
-        assert config['firecrawl_budget_limit'] == 500
+        assert config['firecrawl_budget_limit'] == 3
         assert config['use_llm'] is False
         assert config['alert_price_delta_pct'] == 30.0
 

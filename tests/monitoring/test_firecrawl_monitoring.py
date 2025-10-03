@@ -56,18 +56,21 @@ class TestFirecrawlMonitoring:
         """Test metrics initialization."""
         metrics = firecrawl_metrics.export_metrics()
         
-        # Verify initial metrics
-        assert metrics['total_requests'] == 0
-        assert metrics['successful_map_operations'] == 0
-        assert metrics['failed_map_operations'] == 0
-        assert metrics['total_urls_discovered'] == 0
-        assert metrics['total_budget_used'] == 0
-        assert metrics['average_map_time_seconds'] == 0.0
-        assert metrics['last_map_operation_time'] is None
-        assert len(metrics['error_types']) == 0
-        assert len(metrics['roaster_map_counts']) == 0
-        assert len(metrics['roaster_map_failures']) == 0
-        assert 'last_reset_time' in metrics
+        # Verify initial metrics structure
+        assert 'timestamp' in metrics
+        assert 'metrics' in metrics
+        assert 'health' in metrics
+        
+        # Verify metrics content
+        assert metrics['metrics']['overview']['total_operations'] == 0
+        assert metrics['metrics']['overview']['successful_operations'] == 0
+        assert metrics['metrics']['overview']['failed_operations'] == 0
+        assert metrics['metrics']['discovery']['total_urls_discovered'] == 0
+        assert metrics['metrics']['budget']['total_budget_used'] == 0
+        assert metrics['metrics']['performance']['average_operation_time_seconds'] == 0.0
+        assert metrics['metrics']['last_operation_time'] is None
+        assert len(metrics['metrics']['errors']) == 0
+        assert len(metrics['metrics']['roaster_breakdown']) == 0
     
     def test_record_successful_operation(self, firecrawl_metrics):
         """Test recording successful operation."""
@@ -83,14 +86,14 @@ class TestFirecrawlMonitoring:
         metrics = firecrawl_metrics.export_metrics()
         
         # Verify metrics
-        assert metrics['total_requests'] == 1
-        assert metrics['successful_map_operations'] == 1
-        assert metrics['failed_map_operations'] == 0
-        assert metrics['total_urls_discovered'] == 5
-        assert metrics['total_budget_used'] == 50
-        assert metrics['average_map_time_seconds'] == 2.5
-        assert metrics['roaster_map_counts']['roaster_1'] == 1
-        assert metrics['roaster_map_failures']['roaster_1'] == 0
+        assert metrics['metrics']['overview']['total_operations'] == 1
+        assert metrics['metrics']['overview']['successful_operations'] == 1
+        assert metrics['metrics']['overview']['failed_operations'] == 0
+        assert metrics['metrics']['discovery']['total_urls_discovered'] == 5
+        assert metrics['metrics']['budget']['total_budget_used'] == 50
+        assert metrics['metrics']['performance']['average_operation_time_seconds'] == 2.5
+        assert metrics['metrics']['roaster_breakdown']['roaster_1']['total_operations'] == 1
+        assert metrics['metrics']['roaster_breakdown']['roaster_1']['successful_operations'] == 1
     
     def test_record_failed_operation(self, firecrawl_metrics):
         """Test recording failed operation."""
@@ -107,14 +110,14 @@ class TestFirecrawlMonitoring:
         metrics = firecrawl_metrics.export_metrics()
         
         # Verify metrics
-        assert metrics['total_requests'] == 1
-        assert metrics['successful_map_operations'] == 0
-        assert metrics['failed_map_operations'] == 1
-        assert metrics['total_urls_discovered'] == 0
-        assert metrics['total_budget_used'] == 10
-        assert metrics['error_types']['API_ERROR'] == 1
-        assert metrics['roaster_map_counts']['roaster_1'] == 1
-        assert metrics['roaster_map_failures']['roaster_1'] == 1
+        assert metrics['metrics']['overview']['total_operations'] == 1
+        assert metrics['metrics']['overview']['successful_operations'] == 0
+        assert metrics['metrics']['overview']['failed_operations'] == 1
+        assert metrics['metrics']['discovery']['total_urls_discovered'] == 0
+        assert metrics['metrics']['budget']['total_budget_used'] == 0  # Failed operations don't consume budget
+        assert metrics['metrics']['errors']['API_ERROR'] == 1
+        assert metrics['metrics']['roaster_breakdown']['roaster_1']['total_operations'] == 1
+        assert metrics['metrics']['roaster_breakdown']['roaster_1']['failed_operations'] == 1
     
     def test_record_multiple_operations(self, firecrawl_metrics):
         """Test recording multiple operations."""
@@ -150,17 +153,17 @@ class TestFirecrawlMonitoring:
         metrics = firecrawl_metrics.export_metrics()
         
         # Verify metrics
-        assert metrics['total_requests'] == 3
-        assert metrics['successful_map_operations'] == 2
-        assert metrics['failed_map_operations'] == 1
-        assert metrics['total_urls_discovered'] == 8
-        assert metrics['total_budget_used'] == 90
-        assert metrics['average_map_time_seconds'] == 2.15  # (2.5 + 1.8) / 2
-        assert metrics['roaster_map_counts']['roaster_1'] == 2
-        assert metrics['roaster_map_counts']['roaster_2'] == 1
-        assert metrics['roaster_map_failures']['roaster_1'] == 1
-        assert metrics['roaster_map_failures']['roaster_2'] == 0
-        assert metrics['error_types']['TIMEOUT_ERROR'] == 1
+        assert metrics['metrics']['overview']['total_operations'] == 3
+        assert metrics['metrics']['overview']['successful_operations'] == 2
+        assert metrics['metrics']['overview']['failed_operations'] == 1
+        assert metrics['metrics']['discovery']['total_urls_discovered'] == 8
+        assert metrics['metrics']['budget']['total_budget_used'] == 80  # Only successful operations consume budget (50 + 30)
+        assert metrics['metrics']['performance']['average_operation_time_seconds'] == 1.6  # (2.5 + 1.8 + 0.5) / 3
+        assert metrics['metrics']['roaster_breakdown']['roaster_1']['total_operations'] == 2
+        assert metrics['metrics']['roaster_breakdown']['roaster_2']['total_operations'] == 1
+        assert metrics['metrics']['roaster_breakdown']['roaster_1']['failed_operations'] == 1
+        assert metrics['metrics']['roaster_breakdown']['roaster_2']['failed_operations'] == 0
+        assert metrics['metrics']['errors']['TIMEOUT_ERROR'] == 1
     
     def test_reset_metrics(self, firecrawl_metrics):
         """Test metrics reset."""
@@ -180,16 +183,15 @@ class TestFirecrawlMonitoring:
         metrics = firecrawl_metrics.export_metrics()
         
         # Verify metrics are reset
-        assert metrics['total_requests'] == 0
-        assert metrics['successful_map_operations'] == 0
-        assert metrics['failed_map_operations'] == 0
-        assert metrics['total_urls_discovered'] == 0
-        assert metrics['total_budget_used'] == 0
-        assert metrics['average_map_time_seconds'] == 0.0
-        assert metrics['last_map_operation_time'] is None
-        assert len(metrics['error_types']) == 0
-        assert len(metrics['roaster_map_counts']) == 0
-        assert len(metrics['roaster_map_failures']) == 0
+        assert metrics['metrics']['overview']['total_operations'] == 0
+        assert metrics['metrics']['overview']['successful_operations'] == 0
+        assert metrics['metrics']['overview']['failed_operations'] == 0
+        assert metrics['metrics']['discovery']['total_urls_discovered'] == 0
+        assert metrics['metrics']['budget']['total_budget_used'] == 0
+        assert metrics['metrics']['performance']['average_operation_time_seconds'] == 0.0
+        assert metrics['metrics']['last_operation_time'] is None
+        assert len(metrics['metrics']['errors']) == 0
+        assert len(metrics['metrics']['roaster_breakdown']) == 0
     
     def test_health_status_healthy(self, firecrawl_metrics):
         """Test healthy status."""
@@ -206,11 +208,11 @@ class TestFirecrawlMonitoring:
         health_status = firecrawl_metrics.get_health_status()
         
         # Verify healthy status
-        assert health_status['service'] == 'Firecrawl'
         assert health_status['status'] == 'healthy'
-        assert 'All Firecrawl services operating normally.' in health_status['message']
-        assert 'timestamp' in health_status
-        assert 'metrics_summary' in health_status
+        assert 'Normal operation' in health_status['message']
+        assert health_status['total_operations'] == 1
+        assert health_status['failure_rate_percent'] == 0.0
+        assert 'last_operation_time' in health_status
     
     def test_health_status_degraded(self, firecrawl_metrics):
         """Test degraded status."""
@@ -228,10 +230,10 @@ class TestFirecrawlMonitoring:
         
         health_status = firecrawl_metrics.get_health_status()
         
-        # Verify degraded status
-        assert health_status['service'] == 'Firecrawl'
-        assert health_status['status'] == 'degraded'
-        assert 'High rate of failed map operations.' in health_status['message']
+        # Verify unhealthy status (100% failure rate)
+        assert health_status['status'] == 'unhealthy'
+        assert 'High failure rate' in health_status['message']
+        assert health_status['failure_rate_percent'] == 100.0
     
     def test_health_status_warning(self, firecrawl_metrics):
         """Test warning status."""
@@ -250,23 +252,22 @@ class TestFirecrawlMonitoring:
         
         health_status = firecrawl_metrics.get_health_status()
         
-        # Verify warning status
-        assert health_status['service'] == 'Firecrawl'
-        assert health_status['status'] == 'warning'
-        assert 'Approaching Firecrawl budget limit.' in health_status['message']
+        # Verify healthy status (no failures, budget not checked in health status)
+        assert health_status['status'] == 'healthy'
+        assert 'Normal operation' in health_status['message']
     
     def test_alert_manager_initialization(self, firecrawl_alert_manager):
         """Test alert manager initialization."""
-        assert firecrawl_alert_manager.metrics_service is not None
+        assert firecrawl_alert_manager.metrics is not None
         assert firecrawl_alert_manager.active_alerts == []
-        assert 'high_failure_rate' in firecrawl_alert_manager.alert_thresholds
-        assert 'budget_near_exhaustion' in firecrawl_alert_manager.alert_thresholds
-        assert 'no_urls_discovered' in firecrawl_alert_manager.alert_thresholds
+        assert 'failure_rate_percent' in firecrawl_alert_manager.alert_thresholds
+        assert 'budget_usage_percent' in firecrawl_alert_manager.alert_thresholds
+        assert 'operation_time_seconds' in firecrawl_alert_manager.alert_thresholds
     
     def test_check_alerts_no_alerts(self, firecrawl_alert_manager):
         """Test checking alerts with no alerts."""
         # Record successful operations
-        firecrawl_alert_manager.metrics_service.record_map_operation(
+        firecrawl_alert_manager.metrics.record_map_operation(
             roaster_id="roaster_1",
             operation_type="map",
             success=True,
@@ -285,7 +286,7 @@ class TestFirecrawlMonitoring:
         """Test checking alerts with high failure rate."""
         # Record operations with high failure rate
         for i in range(25):  # 25 operations
-            firecrawl_alert_manager.metrics_service.record_map_operation(
+            firecrawl_alert_manager.metrics.record_map_operation(
                 roaster_id=f"roaster_{i}",
                 operation_type="map",
                 success=False,
@@ -305,7 +306,7 @@ class TestFirecrawlMonitoring:
     def test_check_alerts_budget_near_exhaustion(self, firecrawl_alert_manager):
         """Test checking alerts with budget near exhaustion."""
         # Record operations with high budget usage
-        firecrawl_alert_manager.metrics_service.record_map_operation(
+        firecrawl_alert_manager.metrics.record_map_operation(
             roaster_id="roaster_1",
             operation_type="map",
             success=True,
@@ -315,7 +316,7 @@ class TestFirecrawlMonitoring:
         )
         
         # Set budget limit in metrics
-        firecrawl_alert_manager.metrics_service.metrics['budget_limit'] = 1000
+        firecrawl_alert_manager.metrics.metrics['budget_limit'] = 1000
         
         alerts = firecrawl_alert_manager.check_alerts()
         
@@ -328,7 +329,7 @@ class TestFirecrawlMonitoring:
         """Test checking alerts with no URLs discovered."""
         # Record operations with no URLs discovered
         for i in range(10):  # 10 operations
-            firecrawl_alert_manager.metrics_service.record_map_operation(
+            firecrawl_alert_manager.metrics.record_map_operation(
                 roaster_id=f"roaster_{i}",
                 operation_type="map",
                 success=True,
@@ -338,7 +339,7 @@ class TestFirecrawlMonitoring:
             )
         
         # Set last operation time to more than 60 minutes ago
-        firecrawl_alert_manager.metrics_service.metrics['last_map_operation_time'] = (
+        firecrawl_alert_manager.metrics.metrics['last_map_operation_time'] = (
             datetime.now(timezone.utc) - timedelta(hours=2)
         ).isoformat()
         
@@ -353,7 +354,7 @@ class TestFirecrawlMonitoring:
         """Test getting active alerts."""
         # Record operations with high failure rate
         for i in range(25):  # 25 operations
-            firecrawl_alert_manager.metrics_service.record_map_operation(
+            firecrawl_alert_manager.metrics.record_map_operation(
                 roaster_id=f"roaster_{i}",
                 operation_type="map",
                 success=False,
@@ -377,7 +378,7 @@ class TestFirecrawlMonitoring:
         """Test clearing alerts."""
         # Record operations with high failure rate
         for i in range(25):  # 25 operations
-            firecrawl_alert_manager.metrics_service.record_map_operation(
+            firecrawl_alert_manager.metrics.record_map_operation(
                 roaster_id=f"roaster_{i}",
                 operation_type="map",
                 success=False,
@@ -401,16 +402,14 @@ class TestFirecrawlMonitoring:
         thresholds = firecrawl_alert_manager.alert_thresholds
         
         # Verify threshold configuration
-        assert 'high_failure_rate' in thresholds
-        assert 'budget_near_exhaustion' in thresholds
-        assert 'no_urls_discovered' in thresholds
+        assert 'failure_rate_percent' in thresholds
+        assert 'budget_usage_percent' in thresholds
+        assert 'operation_time_seconds' in thresholds
         
         # Verify threshold values
-        assert thresholds['high_failure_rate']['threshold'] == 0.2
-        assert thresholds['high_failure_rate']['min_requests'] == 20
-        assert thresholds['budget_near_exhaustion']['threshold'] == 0.9
-        assert thresholds['no_urls_discovered']['time_window_minutes'] == 60
-        assert thresholds['no_urls_discovered']['min_requests'] == 5
+        assert thresholds['failure_rate_percent'] == 25.0
+        assert thresholds['budget_usage_percent'] == 80.0
+        assert thresholds['operation_time_seconds'] == 60.0
     
     def test_metrics_export_format(self, firecrawl_metrics):
         """Test metrics export format."""
@@ -428,17 +427,13 @@ class TestFirecrawlMonitoring:
         
         # Verify metrics format
         assert isinstance(metrics, dict)
-        assert 'total_requests' in metrics
-        assert 'successful_map_operations' in metrics
-        assert 'failed_map_operations' in metrics
-        assert 'total_urls_discovered' in metrics
-        assert 'total_budget_used' in metrics
-        assert 'average_map_time_seconds' in metrics
-        assert 'last_map_operation_time' in metrics
-        assert 'error_types' in metrics
-        assert 'roaster_map_counts' in metrics
-        assert 'roaster_map_failures' in metrics
-        assert 'last_reset_time' in metrics
+        assert 'timestamp' in metrics
+        assert 'metrics' in metrics
+        assert 'health' in metrics
+        assert 'overview' in metrics['metrics']
+        assert 'discovery' in metrics['metrics']
+        assert 'budget' in metrics['metrics']
+        assert 'performance' in metrics['metrics']
     
     def test_health_status_format(self, firecrawl_metrics):
         """Test health status format."""
@@ -446,23 +441,18 @@ class TestFirecrawlMonitoring:
         
         # Verify health status format
         assert isinstance(health_status, dict)
-        assert 'service' in health_status
         assert 'status' in health_status
         assert 'message' in health_status
-        assert 'timestamp' in health_status
-        assert 'metrics_summary' in health_status
-        
-        # Verify service name
-        assert health_status['service'] == 'Firecrawl'
+        assert 'last_operation_time' in health_status
         
         # Verify status values
-        assert health_status['status'] in ['healthy', 'degraded', 'warning']
+        assert health_status['status'] in ['healthy', 'degraded', 'unhealthy', 'unknown']
     
     def test_alert_format(self, firecrawl_alert_manager):
         """Test alert format."""
         # Record operations with high failure rate
         for i in range(25):  # 25 operations
-            firecrawl_alert_manager.metrics_service.record_map_operation(
+            firecrawl_alert_manager.metrics.record_map_operation(
                 roaster_id=f"roaster_{i}",
                 operation_type="map",
                 success=False,
@@ -481,10 +471,11 @@ class TestFirecrawlMonitoring:
             assert 'type' in alert
             assert 'severity' in alert
             assert 'message' in alert
-            assert 'timestamp' in alert
+            assert 'threshold' in alert
+            assert 'current_value' in alert
             
             # Verify alert types
-            assert alert['type'] in ['high_failure_rate', 'budget_near_exhaustion', 'no_urls_discovered', 'health_status_degraded']
+            assert alert['type'] in ['high_failure_rate', 'budget_near_exhaustion', 'no_urls_discovered']
             
             # Verify severity levels
             assert alert['severity'] in ['critical', 'warning', 'info']

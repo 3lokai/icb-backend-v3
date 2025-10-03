@@ -1,7 +1,7 @@
 # Story F.3: Price-only must not touch images
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** system administrator,

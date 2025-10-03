@@ -308,3 +308,131 @@ class TestFirecrawlMapService:
         assert "https://testroaster.com/about" not in valid_urls
         assert "https://testroaster.com/contact" not in valid_urls
         assert "not-a-url" not in valid_urls
+    
+    def test_epic_b_price_only_keywords(self, firecrawl_map_service):
+        """Test Epic B price-only keyword optimization."""
+        # Test price-only keywords
+        price_keywords = firecrawl_map_service._get_price_only_keywords()
+        
+        # Verify price-focused keywords
+        assert "price" in price_keywords
+        assert "cost" in price_keywords
+        assert "buy" in price_keywords
+        assert "shop" in price_keywords
+        assert "coffee" in price_keywords
+        assert "bean" in price_keywords
+        
+        # Should be more focused than full keywords
+        assert len(price_keywords) < 20  # More focused than full keyword set
+    
+    def test_epic_b_price_only_url_validation(self, firecrawl_map_service, mock_roaster_config):
+        """Test Epic B price-only URL validation optimization."""
+        urls = [
+            "https://testroaster.com/products/coffee-bean",
+            "https://testroaster.com/shop/espresso-blend", 
+            "https://testroaster.com/buy/coffee-powder",
+            "https://testroaster.com/about",
+            "https://testroaster.com/contact",
+            "https://testroaster.com/blog/coffee-tips"
+        ]
+        
+        # Test price-only URL validation
+        price_urls = firecrawl_map_service._validate_price_only_urls(urls, mock_roaster_config)
+        
+        # Verify price-focused filtering
+        assert len(price_urls) == 3  # Only price-relevant URLs
+        assert "https://testroaster.com/products/coffee-bean" in price_urls
+        assert "https://testroaster.com/shop/espresso-blend" in price_urls
+        assert "https://testroaster.com/buy/coffee-powder" in price_urls
+        assert "https://testroaster.com/about" not in price_urls
+        assert "https://testroaster.com/contact" not in price_urls
+        assert "https://testroaster.com/blog/coffee-tips" not in price_urls
+    
+    def test_epic_b_price_only_likely_price_url(self, firecrawl_map_service):
+        """Test Epic B price-only URL pattern matching."""
+        # Test price-relevant URLs
+        price_urls = [
+            "https://testroaster.com/products/coffee-bean",
+            "https://testroaster.com/shop/espresso-blend",
+            "https://testroaster.com/buy/coffee-powder",
+            "https://testroaster.com/store/roasted-beans"
+        ]
+        
+        for url in price_urls:
+            assert firecrawl_map_service._is_likely_price_url(url), f"URL {url} should be identified as price-relevant"
+        
+        # Test non-price URLs
+        non_price_urls = [
+            "https://testroaster.com/about",
+            "https://testroaster.com/contact",
+            "https://testroaster.com/blog/coffee-tips",
+            "https://testroaster.com/help/shipping"
+        ]
+        
+        for url in non_price_urls:
+            assert not firecrawl_map_service._is_likely_price_url(url), f"URL {url} should not be identified as price-relevant"
+    
+    @pytest.mark.asyncio
+    async def test_epic_b_price_only_discovery(self, firecrawl_map_service, mock_roaster_config):
+        """Test Epic B price-only discovery with job_type parameter."""
+        # Mock client to return price-focused URLs
+        mock_urls = [
+            "https://testroaster.com/products/coffee-bean",
+            "https://testroaster.com/shop/espresso-blend",
+            "https://testroaster.com/buy/coffee-powder"
+        ]
+        
+        firecrawl_map_service.client.discover_product_urls = AsyncMock(return_value=mock_urls)
+        
+        # Test price-only discovery
+        result = await firecrawl_map_service.discover_roaster_products(
+            roaster_config=mock_roaster_config,
+            job_type="price_only"
+        )
+        
+        # Verify price-only result
+        assert result['status'] == 'success'
+        assert result['job_type'] == 'price_only'
+        assert len(result['discovered_urls']) == 3
+        assert "https://testroaster.com/products/coffee-bean" in result['discovered_urls']
+        
+        # Verify client was called with job_type
+        firecrawl_map_service.client.discover_product_urls.assert_called_once()
+        call_args = firecrawl_map_service.client.discover_product_urls.call_args
+        assert call_args[1]['job_type'] == 'price_only'
+    
+    @pytest.mark.asyncio
+    async def test_epic_b_batch_price_only_discovery(self, firecrawl_map_service, mock_roaster_config):
+        """Test Epic B batch price-only discovery."""
+        # Create multiple roaster configs
+        roaster_configs = [
+            mock_roaster_config,
+            RoasterConfigSchema(
+                id="roaster2",
+                name="Test Roaster 2",
+                base_url="https://roaster2.com",
+                use_firecrawl_fallback=True,
+                firecrawl_budget_limit=10
+            )
+        ]
+        
+        # Mock client for batch discovery
+        firecrawl_map_service.client.discover_product_urls = AsyncMock(return_value=[
+            "https://testroaster.com/products/coffee-bean"
+        ])
+        
+        # Test batch price-only discovery
+        result = await firecrawl_map_service.batch_discover_products(
+            roaster_configs=roaster_configs,
+            job_type="price_only"
+        )
+        
+        # Verify batch result
+        assert result['job_type'] == 'price_only'
+        assert result['total_roasters'] == 2
+        assert result['successful_discoveries'] == 2
+        assert len(result['results']) == 2
+        
+        # Verify all results have price-only job type
+        for individual_result in result['results']:
+            assert individual_result['job_type'] == 'price_only'

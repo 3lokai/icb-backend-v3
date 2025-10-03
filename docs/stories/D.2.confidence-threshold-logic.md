@@ -1,7 +1,7 @@
 # Story D.2: Apply LLM only if confidence >= threshold
 
 ## Status
-Ready for Review
+Done
 
 ## Story
 **As a** data processing engineer,

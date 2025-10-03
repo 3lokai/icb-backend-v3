@@ -1,7 +1,7 @@
 # Story A.1: Worker scaffolding & orchestrator
 
 ## Status
-Ready for Done
+Done
 
 ## Story
 **As a** system administrator,

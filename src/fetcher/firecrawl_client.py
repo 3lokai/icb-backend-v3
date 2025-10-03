@@ -165,13 +165,14 @@ class FirecrawlClient:
                     logger.error(f"{operation_name} failed after {self.config.max_retries} retries")
                     raise FirecrawlAPIError(f"{operation_name} failed: {e}")
     
-    async def map_domain(self, domain: str, search_terms: Optional[List[str]] = None) -> Dict[str, Any]:
+    async def map_domain(self, domain: str, search_terms: Optional[List[str]] = None, job_type: str = "full_refresh") -> Dict[str, Any]:
         """
         Map a domain to discover product URLs.
         
         Args:
             domain: Domain to map (e.g., "example.com")
             search_terms: Optional search terms to filter URLs
+            job_type: Job type - "full_refresh" or "price_only" for Epic B integration
             
         Returns:
             Dictionary containing discovered URLs and metadata
@@ -192,12 +193,20 @@ class FirecrawlClient:
             if not search_terms:
                 search_terms = self.config.coffee_keywords
             
-            # Prepare parameters
-            params = {
-                "max_pages": self.config.max_pages,
-                "include_subdomains": self.config.include_subdomains,
-                "sitemap_only": self.config.sitemap_only
-            }
+            # Prepare parameters with job type optimization
+            if job_type == "price_only":
+                # Price-only mode: reduce max_pages for cost optimization
+                params = {
+                    "max_pages": min(self.config.max_pages, 20),  # Limit pages for cost efficiency
+                    "include_subdomains": False,  # Focus on main domain only
+                    "sitemap_only": True  # Use sitemap for faster discovery
+                }
+            else:
+                params = {
+                    "max_pages": self.config.max_pages,
+                    "include_subdomains": self.config.include_subdomains,
+                    "sitemap_only": self.config.sitemap_only
+                }
             
             if search_terms:
                 params["search"] = " ".join(search_terms)
@@ -205,8 +214,9 @@ class FirecrawlClient:
             logger.info(
                 "Starting domain mapping",
                 domain=domain,
+                job_type=job_type,
                 search_terms=search_terms,
-                max_pages=self.config.max_pages,
+                max_pages=params["max_pages"],
                 budget_remaining=self.budget_tracker.get_usage_stats()['remaining_budget']
             )
             
@@ -344,7 +354,8 @@ class FirecrawlClient:
     async def discover_product_urls(
         self, 
         domain: str, 
-        search_terms: Optional[List[str]] = None
+        search_terms: Optional[List[str]] = None,
+        job_type: str = "full_refresh"
     ) -> List[str]:
         """
         Discover product URLs for a domain.
@@ -352,11 +363,12 @@ class FirecrawlClient:
         Args:
             domain: Domain to discover URLs for
             search_terms: Optional search terms to filter URLs
+            job_type: Job type - "full_refresh" or "price_only" for Epic B integration
             
         Returns:
             List of discovered product URLs
         """
-        result = await self.map_domain(domain, search_terms)
+        result = await self.map_domain(domain, search_terms, job_type)
         
         # Combine coffee URLs and product URLs, removing duplicates
         all_urls = list(set(result.get('coffee_urls', []) + result.get('product_urls', [])))
@@ -419,3 +431,83 @@ class FirecrawlClient:
         self.metrics.reset_metrics()
         self.alert_manager.clear_alerts()
         logger.info("Firecrawl monitoring reset")
+    
+    async def extract_coffee_product(
+        self, 
+        url: str, 
+        size_options: List[str] = None,
+        actions: List[Dict] = None,
+        schema: Dict = None
+    ) -> Dict[str, Any]:
+        """
+        Extract coffee product data including pricing from dropdowns.
+        Uses Firecrawl JavaScript rendering and page interactions.
+        
+        Args:
+            url: Product URL to extract
+            size_options: List of size options to test
+            actions: List of page actions for dropdown interaction
+            schema: Extraction schema for structured data
+            
+        Returns:
+            Dictionary containing extracted product data
+        """
+        try:
+            # Default size options for coffee products
+            if not size_options:
+                size_options = ['250g', '500g', '1kg', '2lb', '5lb']
+            
+            # Default coffee extraction schema
+            if not schema:
+                schema = {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "roaster": {"type": "string"},
+                        "origin": {"type": "string"},
+                        "roast_level": {"type": "string"},
+                        "price_variations": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "size": {"type": "string"},
+                                    "price": {"type": "string"},
+                                    "currency": {"type": "string"},
+                                    "availability": {"type": "string"}
+                                }
+                            }
+                        },
+                        "description": {"type": "string"},
+                        "tasting_notes": {"type": "array", "items": {"type": "string"}},
+                        "images": {"type": "array", "items": {"type": "string"}}
+                    },
+                    "required": ["name", "price_variations"]
+                }
+            
+            params = {
+                "formats": ["extract", "screenshot"],
+                "actions": actions or [],
+                "extract": {
+                    "schema": schema,
+                    "prompt": """
+                    Extract coffee product information including:
+                    - Product name and roaster
+                    - All available sizes and their prices from dropdowns
+                    - Coffee origin, roast level, and tasting notes
+                    - Product images and descriptions
+                    - Availability status for each size option
+                    """
+                }
+            }
+            
+            result = await self._make_request_with_retry(
+                "extract_coffee_product",
+                lambda: self.app.scrape_url(url, params=params)
+            )
+            
+            return result.get('extract', {})
+            
+        except Exception as e:
+            logger.error("Coffee product extraction failed", url=url, error=str(e))
+            raise FirecrawlAPIError(f"Extraction failed: {str(e)}")
