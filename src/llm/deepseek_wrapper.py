@@ -269,3 +269,85 @@ class DeepSeekWrapperService(LLMServiceInterface):
             'consecutive_failures': self._health_status['consecutive_failures'],
             'rate_limit_config': self.config.rate_limits
         }
+    
+    async def classify_coffee_product(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Classify if a product is coffee-related using LLM"""
+        prompt = self._create_coffee_classification_prompt(context)
+        
+        try:
+            # Use the existing enrich_field method with a special field name
+            result = await self.enrich_field(
+                artifact=context,
+                field="coffee_classification", 
+                prompt=prompt
+            )
+            
+            # Parse the LLM response to extract classification
+            return self._parse_coffee_classification_result(result)
+            
+        except Exception as e:
+            logger.error(f"LLM coffee classification failed: {e}")
+            return {
+                "is_coffee": False,
+                "confidence": 0.0,
+                "reasoning": f"LLM classification failed: {str(e)}"
+            }
+    
+    def _create_coffee_classification_prompt(self, context: Dict[str, Any]) -> str:
+        """Create a prompt for coffee classification"""
+        name = context.get("name", "")
+        product_type = context.get("product_type", "")
+        tags = context.get("tags", [])
+        description = context.get("description", "")
+        
+        prompt = f"""
+You are a coffee product classification expert. Analyze the following product and determine if it's a coffee product or equipment/accessory.
+
+Product Name: {name}
+Product Type: {product_type}
+Tags: {', '.join(tags) if tags else 'None'}
+Description: {description}
+
+Classification Rules:
+- Coffee products: Coffee beans, ground coffee, whole beans, single origin, blends, espresso beans, filter coffee, specialty coffee
+- Equipment/Accessories: Coffee makers, grinders, filters, cups, mugs, cleaning supplies, training materials, gift sets
+
+Respond with JSON format:
+{{
+    "is_coffee": true/false,
+    "confidence": 0.0-1.0,
+    "reasoning": "Brief explanation of classification decision"
+}}
+"""
+        return prompt
+    
+    def _parse_coffee_classification_result(self, llm_result: LLMResult) -> Dict[str, Any]:
+        """Parse LLM result to extract coffee classification"""
+        try:
+            import json
+            # Extract the value from LLM result
+            response_text = str(llm_result.value)
+            
+            # Try to parse as JSON
+            if response_text.strip().startswith('{'):
+                result = json.loads(response_text)
+                return {
+                    "is_coffee": result.get("is_coffee", False),
+                    "confidence": float(result.get("confidence", 0.0)),
+                    "reasoning": result.get("reasoning", "LLM classification")
+                }
+            else:
+                # Fallback parsing if not JSON
+                return {
+                    "is_coffee": "true" in response_text.lower() or "coffee" in response_text.lower(),
+                    "confidence": 0.7,  # Default confidence for LLM results
+                    "reasoning": response_text
+                }
+                
+        except Exception as e:
+            logger.error(f"Failed to parse LLM coffee classification result: {e}")
+            return {
+                "is_coffee": False,
+                "confidence": 0.0,
+                "reasoning": f"Failed to parse LLM result: {str(e)}"
+            }

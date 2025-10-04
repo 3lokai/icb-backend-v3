@@ -76,3 +76,15 @@ class LLMServiceInterface(ABC):
             Dictionary with health metrics and status
         """
         pass
+    
+    @abstractmethod
+    async def classify_coffee_product(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Classify if a product is coffee-related using LLM
+        
+        Args:
+            context: Product context with name, product_type, tags, description
+            
+        Returns:
+            Dictionary with is_coffee (bool), confidence (float), reasoning (str)
+        """
+        pass

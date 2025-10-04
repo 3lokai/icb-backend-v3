@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from .models import ArtifactModel
 from .storage_reader import StorageReader
+from ..parser.coffee_classification_parser import CoffeeClassificationParser
 
 logger = get_logger(__name__)
 
@@ -47,27 +48,35 @@ class ArtifactValidator:
     - Integration with A.2 storage system
     """
     
-    def __init__(self, storage_reader: Optional[StorageReader] = None):
+    def __init__(self, storage_reader: Optional[StorageReader] = None, llm_service: Optional[Any] = None):
         """
         Initialize artifact validator.
         
         Args:
             storage_reader: Storage reader for A.2 integration
+            llm_service: Optional LLM service for classification fallback
         """
         self.storage_reader = storage_reader or StorageReader()
+        self.classification_parser = CoffeeClassificationParser(llm_service=llm_service)
         self.validation_stats = {
             'total_validated': 0,
             'valid_count': 0,
             'invalid_count': 0,
-            'error_types': {}
+            'error_types': {},
+            'classification_stats': {
+                'coffee_count': 0,
+                'equipment_count': 0,
+                'classification_methods': {}
+            }
         }
     
-    def validate_artifact(self, artifact_data: Dict[str, Any]) -> ValidationResult:
+    async def validate_artifact(self, artifact_data: Dict[str, Any], metadata_only: bool = False) -> ValidationResult:
         """
         Validate a single artifact against the canonical schema.
         
         Args:
             artifact_data: Raw artifact data to validate
+            metadata_only: If True, skip classification (for price-only runs)
             
         Returns:
             ValidationResult with validation status and details
@@ -79,11 +88,25 @@ class ArtifactValidator:
             # Extract artifact ID for tracking
             artifact_id = self._extract_artifact_id(artifact_data)
             
+            # Perform coffee classification (skip for price-only runs)
+            if not metadata_only:
+                classification_result = await self._classify_product(artifact_data, validated_artifact)
+                if classification_result:
+                    # Update the validated artifact with classification
+                    if not validated_artifact.normalization:
+                        from .models import NormalizationModel
+                        validated_artifact.normalization = NormalizationModel()
+                    validated_artifact.normalization.is_coffee = classification_result.is_coffee
+                    
+                    # Update classification stats
+                    self._update_classification_stats(classification_result)
+            
             logger.info(
                 "Artifact validation successful",
                 artifact_id=artifact_id,
                 source=artifact_data.get('source'),
-                roaster_domain=artifact_data.get('roaster_domain')
+                roaster_domain=artifact_data.get('roaster_domain'),
+                is_coffee=validated_artifact.normalization.is_coffee if validated_artifact.normalization else None
             )
             
             self.validation_stats['total_validated'] += 1
@@ -148,7 +171,7 @@ class ArtifactValidator:
                 artifact_id=artifact_id
             )
     
-    def validate_from_storage(
+    async def validate_from_storage(
         self,
         roaster_id: str,
         platform: str,
@@ -181,7 +204,7 @@ class ArtifactValidator:
                 )
             
             # Validate the artifact
-            return self.validate_artifact(artifact_data)
+            return await self.validate_artifact(artifact_data)
             
         except Exception as e:
             logger.error(
@@ -198,12 +221,13 @@ class ArtifactValidator:
                 errors=[f"Storage read error: {str(e)}"]
             )
     
-    def validate_batch(self, artifacts: List[Dict[str, Any]]) -> List[ValidationResult]:
+    async def validate_batch(self, artifacts: List[Dict[str, Any]], metadata_only: bool = False) -> List[ValidationResult]:
         """
         Validate multiple artifacts in batch.
         
         Args:
             artifacts: List of artifact data to validate
+            metadata_only: If True, skip classification (for price-only runs)
             
         Returns:
             List of ValidationResult objects
@@ -211,17 +235,75 @@ class ArtifactValidator:
         results = []
         
         for artifact_data in artifacts:
-            result = self.validate_artifact(artifact_data)
+            result = await self.validate_artifact(artifact_data, metadata_only=metadata_only)
             results.append(result)
         
         logger.info(
             "Batch validation completed",
             total_artifacts=len(artifacts),
             valid_count=sum(1 for r in results if r.is_valid),
-            invalid_count=sum(1 for r in results if not r.is_valid)
+            invalid_count=sum(1 for r in results if not r.is_valid),
+            metadata_only=metadata_only,
+            classification_stats=self.validation_stats['classification_stats']
         )
         
         return results
+    
+    async def _classify_product(self, artifact_data: Dict[str, Any], validated_artifact: ArtifactModel) -> Optional[Any]:
+        """
+        Classify product as coffee or equipment.
+        
+        Args:
+            artifact_data: Raw artifact data
+            validated_artifact: Validated artifact model
+            
+        Returns:
+            ClassificationResult or None if classification fails
+        """
+        try:
+            # Extract product data for classification
+            product_data = artifact_data.get('product', {})
+            source = artifact_data.get('source', 'unknown').lower()
+            
+            # Map source to platform for classification
+            platform = 'shopify' if source == 'shopify' else 'woo'
+            
+            # Perform classification
+            classification_result = await self.classification_parser.classify_product(product_data, platform)
+            
+            logger.info(
+                "Product classification completed",
+                is_coffee=classification_result.is_coffee,
+                confidence=classification_result.confidence,
+                method=classification_result.method,
+                reasoning=classification_result.reasoning
+            )
+            
+            return classification_result
+            
+        except Exception as e:
+            logger.error(
+                "Product classification failed",
+                error=str(e),
+                artifact_id=self._extract_artifact_id(artifact_data)
+            )
+            return None
+    
+    def _update_classification_stats(self, classification_result: Any):
+        """Update classification statistics."""
+        try:
+            if classification_result.is_coffee:
+                self.validation_stats['classification_stats']['coffee_count'] += 1
+            else:
+                self.validation_stats['classification_stats']['equipment_count'] += 1
+            
+            # Track classification methods
+            method = classification_result.method
+            self.validation_stats['classification_stats']['classification_methods'][method] = \
+                self.validation_stats['classification_stats']['classification_methods'].get(method, 0) + 1
+                
+        except Exception as e:
+            logger.error(f"Failed to update classification stats: {e}")
     
     def _extract_artifact_id(self, artifact_data: Dict[str, Any]) -> Optional[str]:
         """Extract artifact ID from artifact data."""

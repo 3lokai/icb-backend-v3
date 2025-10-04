@@ -77,6 +77,13 @@ class ValidatorConfig(BaseModel):
     pipeline_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Confidence threshold for pipeline processing")
     enable_pipeline_metrics: bool = Field(default=True, description="Enable pipeline metrics and monitoring")
     
+    # Coffee Classification configuration (A.7)
+    enable_coffee_classification: bool = Field(default=True, description="Enable coffee classification parser")
+    classification_confidence_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Confidence threshold for code-based classification")
+    classification_llm_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="Confidence threshold for LLM fallback")
+    classification_skip_threshold: float = Field(default=0.3, ge=0.0, le=1.0, description="Confidence threshold below which to skip to equipment")
+    enable_classification_metrics: bool = Field(default=True, description="Enable classification metrics and monitoring")
+    
     @field_validator('storage_path', 'invalid_artifacts_path')
     @classmethod
     def validate_paths(cls, v):
